@@ -16,17 +16,29 @@ ALWAYS start here when working on this project:
 
 ## Task routing — choose workflow by task type
 
-### New feature / new module → Full 8-step workflow
+### New feature / new module → Full 9-step workflow
 1. Orient — read project.yaml, find affected blocks
 2. Read block context — output gotchas to user (mandatory)
 3. ADR decision — apply 3-criteria rule
 4. Write tests — key scenarios per module, BEFORE implementation
-5. Implement — with context7, sequential-thinking, KISS/DRY/SOLID
+5. Implement — with context7, sequential-thinking, KISS/DRY/SOLID/Feature-Based
 6. Run tests — green → continue, red → fix
 7. Update YAML — manifests of affected blocks
-8. Commit — pre-commit validates
+8. Self-Check — verify code against all cross-cutting rules (see checklist below)
+9. Commit — pre-commit validates
 
-### Bug fix (logic/behavior) → Full 8-step workflow
+### Self-Check checklist (step 8)
+- [ ] context7: checked current docs for all libs/frameworks used?
+- [ ] KISS: no functions > 40 lines, no nesting > 3 levels?
+- [ ] DRY: grepped project for similar logic, no unnecessary duplication?
+- [ ] SOLID: each new module/class has single responsibility?
+- [ ] Feature-Based: new code inside features/[name]/, not in root or wrong folder?
+- [ ] Feature-Based: no direct imports from another feature's internals (only via index.ts)?
+- [ ] Feature-Based: nothing added to shared/ that's used by only 1 feature?
+- [ ] Test-First: tests exist and pass for new/changed modules?
+If any check fails — fix before committing.
+
+### Bug fix (logic/behavior) → Full 9-step workflow
 Same as above. ADR likely "not needed", but tests are mandatory to prevent regression. Add gotcha if bug was non-obvious.
 
 ### Bug fix (trivial: typo, text, style) → Light workflow
@@ -35,7 +47,7 @@ Same as above. ADR likely "not needed", but tests are mandatory to prevent regre
 3. Fix
 4. Commit
 
-### Refactoring → Full 8-step workflow
+### Refactoring → Full 9-step workflow
 Tests are critical — they prove behavior is preserved. YAML update mandatory since paths/structure change.
 
 This routing applies to ALL tasks automatically, not only when user says "AF".
@@ -124,6 +136,13 @@ Apply during implementation, not as a separate review step:
 - Implement → run tests → green = commit, red = fix
 - Tests are the main safety net in agent-first — they verify behavior, YAML only verifies structure
 - Register test commands in `project.yaml → tests`
+
+### 5. Always use Feature-Based Architecture
+- Structure: features/ (one folder per business capability) + shared/ (only code used by 2+ features)
+- Colocation: components, hooks/services, types, tests — all inside the feature folder
+- Features import each other only through index.ts (public API)
+- Move to shared/ only when actually used in 2+ features, not preemptively
+- Anti-pattern: layer-based grouping (controllers/, services/, models/)
 
 ## Agent autonomy rules
 

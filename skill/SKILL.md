@@ -69,6 +69,25 @@ Write tests BEFORE implementation for each module/feature:
 Test-First per module: one cycle of tests → implementation → verification.
 Tests are the main safety net in agent-first — they verify behavior, YAML manifests only verify structure.
 
+### 5. Always use Feature-Based Architecture for code organization
+Organize code by business feature, not by technical layer:
+
+**Structure:**
+- `features/` (or `modules/`) — one folder per business capability
+- `shared/` — only code used by 2+ features
+- Each feature folder contains its own components, hooks/services, types, tests
+
+**Rules:**
+- Everything related to a feature lives in its folder (colocation principle)
+- Features import each other only through index.ts (public API)
+- Move to shared/ only when actually used in 2+ features, not preemptively
+- 1 feature = 1 user-facing capability, describable in one sentence
+
+**Anti-patterns:**
+- Layer-based grouping (controllers/, services/, models/) — splits features across folders
+- Premature shared/ — extracting "just in case" before 2+ usages exist
+- Deep cross-feature imports bypassing index.ts
+
 ## Command routing
 
 Before starting the setup workflow, check if the user is invoking a sub-command:
@@ -238,13 +257,13 @@ When user says "Проведи дрейф-аудит" / "drift audit" / similar 
 
 Applies to ALL tasks automatically. Route by task type:
 
-- **New feature / new module / bug fix (logic) / refactoring** → Full 8-step workflow below
+- **New feature / new module / bug fix (logic) / refactoring** → Full 9-step workflow below
 - **Bug fix (trivial: typo, text, style)** → Light workflow: Orient → read gotchas → fix → commit
-- When user explicitly says "добавь фичу по AF" / "implement feature AF" / "нужен ли ADR" → always full 8-step workflow
+- When user explicitly says "добавь фичу по AF" / "implement feature AF" / "нужен ли ADR" → always full 9-step workflow
 
 See `guide.md` Appendix Е for full reference.
 
-### Feature Workflow Steps (8 steps)
+### Feature Workflow Steps (9 steps)
 
 1. **Orient** — read `documentation/project.yaml` to find affected layers
 2. **Read block context** — read YAML of affected blocks: summary, gotchas, notes, related_blocks. **Print all gotchas of affected blocks to the user** — this is mandatory, never skip silently
@@ -263,7 +282,17 @@ See `guide.md` Appendix Е for full reference.
    - `api_calls` — if new endpoint
    - `depends_on` / `related_blocks` — if connections changed
 7. **Add gotcha** — if stumbled on non-obvious issue (budget: 1-2 per session)
-8. **Commit** — pre-commit hook validates references
+8. **Self-Check** — before committing, verify code against cross-cutting rules:
+   - [ ] context7: checked current docs for all libs/frameworks used?
+   - [ ] KISS: no functions > 40 lines, no nesting > 3 levels?
+   - [ ] DRY: grepped project for similar logic, no unnecessary duplication?
+   - [ ] SOLID: each new module/class has single responsibility?
+   - [ ] Feature-Based: new code is inside features/[name]/, not in root or wrong folder?
+   - [ ] Feature-Based: no direct imports from another feature's internals (only via index.ts)?
+   - [ ] Feature-Based: nothing added to shared/ that's used by only 1 feature?
+   - [ ] Test-First: tests exist and pass for new/changed modules?
+   If any check fails — fix before committing.
+9. **Commit** — pre-commit hook validates references
 
 ### ADR Decision Rule (3 criteria)
 

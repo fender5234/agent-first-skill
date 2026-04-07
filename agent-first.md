@@ -191,17 +191,18 @@ ALWAYS start here:
 ```markdown
 ## Task routing — choose workflow by task type
 
-### New feature / new module → Full 8-step workflow
+### New feature / new module → Full 9-step workflow
 1. Orient — read project.yaml, find affected blocks
 2. Read block context — output gotchas to user (mandatory)
 3. ADR decision — apply 3-criteria rule
 4. Write tests — key scenarios per module, BEFORE implementation
-5. Implement — with context7, sequential-thinking, KISS/DRY/SOLID
+5. Implement — with context7, sequential-thinking, KISS/DRY/SOLID/Feature-Based
 6. Run tests — green → continue, red → fix
 7. Update YAML — manifests of affected blocks
-8. Commit — pre-commit validates
+8. Self-Check — verify code against all cross-cutting rules before commit
+9. Commit — pre-commit validates
 
-### Bug fix (logic/behavior) → Full 8-step workflow
+### Bug fix (logic/behavior) → Full 9-step workflow
 Same steps. ADR likely "not needed", but tests mandatory to prevent regression.
 
 ### Bug fix (trivial: typo, text, style) → Light workflow
@@ -210,7 +211,7 @@ Same steps. ADR likely "not needed", but tests mandatory to prevent regression.
 3. Fix
 4. Commit
 
-### Refactoring → Full 8-step workflow
+### Refactoring → Full 9-step workflow
 Tests critical — prove behavior preserved. YAML update mandatory.
 
 This applies to ALL tasks automatically, not only when user says "AF".
@@ -375,16 +376,51 @@ scripts/
 
 **Регистрация:** команды запуска тестов указываются в `project.yaml → tests`, чтобы агент знал что запускать.
 
-### Как четыре правила работают вместе
+### 9.5. Всегда использовать Feature-Based Architecture для организации кода
+
+Код группируется по бизнес-назначению, не по техническому типу. Всё что относится к одной фиче — в одной папке.
+
+**Структура проекта:**
+- `features/` (или `modules/`) — одна папка на бизнес-возможность
+- `shared/` — только код, используемый в 2+ фичах
+- Каждая папка фичи содержит свои компоненты, хуки/сервисы, типы, тесты
+
+**Правила:**
+- Всё, относящееся к фиче, лежит в её папке (принцип колокации)
+- Фичи импортируют друг друга только через index.ts (публичный API)
+- Выноси в shared/ только когда реально используется в 2+ фичах, не заранее
+- Тесты рядом с кодом (features/orders/orders.test.ts), не в отдельной папке tests/
+
+**Как определить границы фичи:**
+- Тест: "Можно описать одним предложением для пользователя?"
+- "Пользователь может управлять корзиной" → одна фича (cart)
+- "Пользователь может нажать кнопку" → слишком мелко, часть фичи
+- "Пользователь может пользоваться магазином" → слишком крупно, разбивай
+
+**Анти-паттерны:**
+- Layer-based группировка (controllers/, services/, models/) — размазывает фичу по папкам
+- Преждевременный shared/ — вынос "на всякий случай" до 2+ использований
+- Прямые импорты из внутренностей чужой фичи, минуя index.ts
+- Папка shared/ больше чем features/ — признак что всё складывают в общее
+
+**Почему это критично для agent-first:**
+- Агент видит весь контекст фичи в одной папке — меньше файлов для координации
+- Меньше шансов забыть обновить связанный файл в другой папке
+- Предсказуемая структура — агент знает куда класть новый код
+- Merge-конфликты реже — разные фичи не пересекаются по папкам
+
+### Как пять правил работают вместе
 
 ```
 context7 даёт актуальные знания
   → sequential-thinking структурирует решение
-    → Test-First фиксирует ожидаемое поведение
-      → KISS/DRY/SOLID задают стандарт реализации
+    → Feature-Based Architecture задаёт структуру проекта
+      → Test-First фиксирует ожидаемое поведение
+        → KISS/DRY/SOLID задают стандарт реализации
+          → Self-Check верифицирует все правила перед коммитом
 ```
 
-Код сразу пишется качественно, с гарантией поведения, без отдельного прохода ревью.
+Код сразу пишется качественно, в правильной структуре, с гарантией поведения. Self-Check в конце цикла ловит нарушения, которые проскочили в процессе.
 
 ---
 
@@ -1442,7 +1478,7 @@ jobs:
 
 Как внедрять новую фичу в AF-проекте. Описывает порядок действий агента и пользователя, когда поступает запрос на новую функциональность.
 
-## Е.1. Чеклист новой фичи (7 шагов)
+## Е.1. Чеклист новой фичи (9 шагов)
 
 ```
 [ ] 1. Прочитать documentation/project.yaml → найти затронутые слои
@@ -1450,15 +1486,26 @@ jobs:
 [ ] 3. Задать вопрос: "есть ли несколько разумных путей реализации?"
       ├── Да  → создать ADR ДО реализации, линковать в блок через adr: [N]
       └── Нет → просто реализация
-[ ] 4. Реализовать фичу
-[ ] 5. Обновить YAML затронутых блоков (если поменялась суть/структура):
+[ ] 4. Написать тесты ключевых сценариев модуля ДО реализации
+[ ] 5. Реализовать фичу, прогнать тесты (зелёные → дальше, красные → фиксить)
+[ ] 6. Обновить YAML затронутых блоков (если поменялась суть/структура):
        - code_path/entry (если перемещал файлы)
        - summary (если сменилось назначение блока)
        - notes (если появился/удалился ключевой файл)
        - api_calls (если добавился endpoint)
        - depends_on / related_blocks (если изменились связи)
-[ ] 6. Добавить gotcha (если столкнулся с неочевидной проблемой, 1-2 за сессию)
-[ ] 7. Commit → pre-commit hook валидирует ссылки
+[ ] 7. Добавить gotcha (если столкнулся с неочевидной проблемой, 1-2 за сессию)
+[ ] 8. Self-Check — проверить код на соответствие cross-cutting правилам:
+       - [ ] context7: проверены актуальные доки для используемых библиотек?
+       - [ ] KISS: нет функций > 40 строк, нет вложенности > 3 уровней?
+       - [ ] DRY: grep по проекту на похожую логику, нет лишнего дублирования?
+       - [ ] SOLID: каждый новый модуль/класс имеет одну ответственность?
+       - [ ] Feature-Based: новый код внутри features/[название]/, не в корне?
+       - [ ] Feature-Based: нет прямых импортов из внутренностей чужой фичи?
+       - [ ] Feature-Based: в shared/ не добавлено ничего, что используется только 1 фичей?
+       - [ ] Test-First: тесты есть и проходят для новых/изменённых модулей?
+       Если что-то не так — исправить до коммита.
+[ ] 9. Commit → pre-commit hook валидирует ссылки
 ```
 
 ## Е.2. Правило «нужен ли ADR?»
