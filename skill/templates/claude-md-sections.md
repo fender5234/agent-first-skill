@@ -28,13 +28,24 @@ Before starting any task, classify it and follow the appropriate workflow:
 
 ### Self-Check checklist (step 8)
 - [ ] context7: checked current docs for all libs/frameworks used?
+- [ ] sequential-thinking: used for all non-trivial decisions during implementation?
 - [ ] KISS: no functions > 40 lines, no nesting > 3 levels?
 - [ ] DRY: grepped project for similar logic, no unnecessary duplication?
 - [ ] SOLID: each new module/class has single responsibility?
 - [ ] Feature-Based: new code inside features/[name]/, not in root or wrong folder?
 - [ ] Feature-Based: no direct imports from another feature's internals (only via index.ts)?
 - [ ] Feature-Based: nothing added to shared/ that's used by only 1 feature?
+- [ ] Naming: new names follow existing project patterns (grepped before naming)?
+- [ ] Naming: one domain = one root word, no synonyms mixing?
+- [ ] Naming: no generic names (utils.ts, helpers.ts) without domain prefix?
+- [ ] Security: no hardcoded secrets (API keys, passwords, tokens) in code?
+- [ ] Security: no SQL/NoSQL string concatenation — use parameterized queries?
+- [ ] Security: user input validated/sanitized before use?
+- [ ] Security: no sensitive data in logs or error messages?
+- [ ] Security: no CORS wildcard (*) in production config?
+- [ ] Security: new dependencies checked for known vulnerabilities?
 - [ ] Test-First: tests exist and pass for new/changed modules?
+- [ ] Test-First: edge cases covered (null, empty, errors, invalid input, boundaries)?
 If any check fails — fix before committing.
 
 ### Bug fix (logic/behavior) → Full 9-step workflow
@@ -81,9 +92,9 @@ Applies to: frameworks, libraries, standard library, build/test tools.
 Never rely on training data — API and best practices change between versions.
 
 ### 2. Always use sequential-thinking for decisions
-Before any non-trivial decision — use sequential-thinking.
-Applies to: ADR decisions, implementation approach, trade-offs, debugging, refactoring.
-Structure: problem → options → trade-offs → decision.
+Before and during implementation — use sequential-thinking for any non-trivial decision.
+Applies to: ADR decisions, implementation approach, trade-offs, debugging, refactoring, mid-implementation design choices.
+Structure: problem → options → trade-offs → decision. If you hit a fork during coding — stop and think first.
 
 ### 3. Always apply KISS / DRY / SOLID when writing code
 - KISS: function > 40 lines → split; nesting > 3 levels → refactor
@@ -92,6 +103,7 @@ Structure: problem → options → trade-offs → decision.
 
 ### 4. Test-First at module level
 - Write tests for key scenarios BEFORE implementation (per module, not per function)
+- Always cover edge cases: null/empty inputs, network errors, invalid input, boundary values
 - Implement → run tests → green = commit, red = fix
 - Tests are the main safety net — they verify behavior, YAML only verifies structure
 
@@ -101,6 +113,21 @@ Structure: problem → options → trade-offs → decision.
 - Features import each other only through index.ts (public API)
 - Move to shared/ only when actually used in 2+ features, not preemptively
 - Anti-pattern: layer-based grouping (controllers/, services/, models/)
+
+### 6. Follow consistent Naming Conventions
+- Before naming anything — grep project for existing patterns and follow them exactly
+- One domain = one root word everywhere (order, not purchase/item/product interchangeably)
+- No generic names (utils.ts, helpers.ts) — always prefix with domain (orderUtils.ts)
+- No abbreviations in file names (usr → user; auth is ok — it's a domain term)
+- New feature naming must match the pattern of existing features
+
+### 7. Apply Security basics during implementation
+- Use parameterized queries — never concatenate user input into SQL/NoSQL
+- Validate/sanitize all user input at entry points; always validate server-side
+- Secrets in env vars or secret managers — never hardcode in source
+- Never log sensitive data (passwords, tokens, PII)
+- No CORS wildcard (*) in production; no secrets in version control
+- Check new dependencies for known vulnerabilities before adding
 
 ## Self-maintaining documentation rules
 

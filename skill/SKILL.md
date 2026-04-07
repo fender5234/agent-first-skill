@@ -35,9 +35,10 @@ This applies to: frameworks, libraries, standard library of the language, build 
 **Never rely on training data.** API changes between versions, best practices evolve, deprecated patterns persist in training data.
 
 ### 2. Always use sequential-thinking for structured reasoning
-Before any non-trivial decision — use sequential-thinking MCP server.
-This applies to: ADR decisions, choosing implementation approach, evaluating trade-offs, debugging complex issues, refactoring strategy.
+Before and during implementation — use sequential-thinking MCP server for any non-trivial decision.
+This applies to: ADR decisions, choosing implementation approach, evaluating trade-offs, debugging complex issues, refactoring strategy, and mid-implementation design choices.
 **Never "shoot from the hip."** Structure your reasoning: problem → options → trade-offs → decision.
+If during coding you hit a fork ("should I do X or Y?") — stop and use sequential-thinking before proceeding.
 
 ### 3. Always apply KISS / DRY / SOLID when writing code
 Apply these principles during implementation, not as a separate review step:
@@ -65,6 +66,14 @@ Write tests BEFORE implementation for each module/feature:
 3. Run tests — green → commit, red → fix → rerun
 4. Register test commands in `project.yaml → tests` so agents know what to run
 
+**Always cover edge cases explicitly:**
+- Null / undefined / empty inputs
+- Empty arrays and collections
+- Network errors, timeouts, API returning 4xx/5xx
+- Invalid or malformed user input
+- Concurrent requests / race conditions (if applicable)
+- Boundary values (0, negative, max int, empty string)
+
 **Not classic TDD** (red-green-refactor per function — too expensive in tokens).
 Test-First per module: one cycle of tests → implementation → verification.
 Tests are the main safety net in agent-first — they verify behavior, YAML manifests only verify structure.
@@ -87,6 +96,46 @@ Organize code by business feature, not by technical layer:
 - Layer-based grouping (controllers/, services/, models/) — splits features across folders
 - Premature shared/ — extracting "just in case" before 2+ usages exist
 - Deep cross-feature imports bypassing index.ts
+
+### 6. Follow consistent Naming Conventions for agent-friendliness
+Before creating any file, variable, or function — grep the project for existing naming patterns and follow them exactly.
+
+**Files:**
+- Feature folder: plural noun (orders/, users/, payments/)
+- Components: PascalCase matching feature (OrderList.tsx, OrderCard.tsx)
+- Hooks: use + feature name (useOrders.ts, useCart.ts)
+- API: feature + Api (orderApi.ts, userApi.ts)
+- Types: feature + Types (orderTypes.ts, userTypes.ts)
+- Tests: same name + .test (OrderList.test.tsx)
+
+**Greppability:**
+- One domain = one root word everywhere (order, not purchase/item/product interchangeably)
+- No abbreviations in file names (usr → user; auth is ok — it's a domain term)
+- No generic names (utils.ts, helpers.ts, misc.ts) — always prefix with domain (orderUtils.ts)
+
+**Predictability:**
+- If pattern exists — follow it exactly, don't invent synonyms
+- Before naming anything — grep project for existing conventions
+- New feature naming must match the pattern of existing features
+
+### 7. Apply Security basics during implementation
+Write secure code from the start, not as an afterthought:
+
+**Always:**
+- Use parameterized queries for SQL/NoSQL — never concatenate user input into queries
+- Validate and sanitize all user input at entry points
+- Store secrets in environment variables or secret managers — never hardcode in source
+- Use HTTPS for all external communications
+
+**Never:**
+- Log sensitive data (passwords, tokens, PII, full credit card numbers)
+- Use CORS wildcard (*) in production
+- Commit secrets, .env files, or credentials to version control
+- Trust client-side validation alone — always validate server-side too
+
+**On adding dependencies:**
+- Check for known vulnerabilities before adding (npm audit, pip-audit, etc.)
+- Prefer well-maintained packages with recent updates
 
 ## Command routing
 
@@ -284,13 +333,24 @@ See `guide.md` Appendix Е for full reference.
 7. **Add gotcha** — if stumbled on non-obvious issue (budget: 1-2 per session)
 8. **Self-Check** — before committing, verify code against cross-cutting rules:
    - [ ] context7: checked current docs for all libs/frameworks used?
+   - [ ] sequential-thinking: used for all non-trivial decisions during implementation?
    - [ ] KISS: no functions > 40 lines, no nesting > 3 levels?
    - [ ] DRY: grepped project for similar logic, no unnecessary duplication?
    - [ ] SOLID: each new module/class has single responsibility?
    - [ ] Feature-Based: new code is inside features/[name]/, not in root or wrong folder?
    - [ ] Feature-Based: no direct imports from another feature's internals (only via index.ts)?
    - [ ] Feature-Based: nothing added to shared/ that's used by only 1 feature?
+   - [ ] Naming: new names follow existing project patterns (grepped before naming)?
+   - [ ] Naming: one domain = one root word, no synonyms mixing?
+   - [ ] Naming: no generic names (utils.ts, helpers.ts) without domain prefix?
+   - [ ] Security: no hardcoded secrets (API keys, passwords, tokens) in code?
+   - [ ] Security: no SQL/NoSQL string concatenation — use parameterized queries?
+   - [ ] Security: user input validated/sanitized before use?
+   - [ ] Security: no sensitive data in logs or error messages?
+   - [ ] Security: no CORS wildcard (*) in production config?
+   - [ ] Security: new dependencies checked for known vulnerabilities?
    - [ ] Test-First: tests exist and pass for new/changed modules?
+   - [ ] Test-First: edge cases covered (null, empty, errors, invalid input, boundaries)?
    If any check fails — fix before committing.
 9. **Commit** — pre-commit hook validates references
 
