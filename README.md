@@ -1,0 +1,122 @@
+# Agent-First Skill (Portable Archive)
+
+Резервная копия методологии Agent-First и скилла `agent-first-setup`.
+Используется для переноса на новую машину или восстановления после потери данных.
+
+## Что внутри
+
+```
+agent-first-skill/
+├── README.md              ← этот файл
+├── agent-first.md         ← полная методология AF (справочник)
+├── AGENTS.md              ← универсальные правила для любого AI-агента
+└── skill/                 ← готовый скилл для Claude Code
+    ├── SKILL.md
+    ├── guide.md
+    ├── operator-guide.md  ← руководство оператора (человека)
+    └── templates/
+        ├── project.yaml
+        ├── layer.yaml
+        ├── validate.py
+        ├── pre-commit-config.yaml
+        ├── validate.sh
+        ├── adr-template.md
+        ├── claude-md-sections.md
+        ├── ci-validate.yml
+        ├── generate-manifest.py
+        └── yaml-to-mermaid.py
+```
+
+## Файлы и их назначение
+
+### `agent-first.md`
+Полное руководство по методологии Agent-First: принципы, правила, приложения (А–Е).
+Читается агентами и людьми как справочник. Не зависит от конкретного инструмента.
+
+### `AGENTS.md`
+Универсальные инструкции для AI-агентов (Cursor, Cline, Aider, Continue, Windsurf, Claude Code).
+Большинство современных AI-tools автоматически читают файл `AGENTS.md` в корне проекта.
+Положи копию в корень своего проекта — любой агент начнёт следовать AF-правилам.
+
+### `skill/`
+Готовый скилл `agent-first-setup` для Claude Code (CLI).
+Автотриггерится по фразам: «настрой AF», «добавь фичу по AF», «проведи дрейф-аудит».
+Включает `operator-guide.md` — руководство для оператора (человека), описывающее роли, точки контроля и правила взаимодействия с агентом.
+
+---
+
+## Как использовать на новой машине
+
+### Вариант A: Восстановить скилл в Claude Code
+
+```bash
+# Скопировать скилл в глобальную папку Claude Code
+cp -r agent-first-skill/skill ~/.claude/commands/agent-first-setup
+
+# Теперь в Claude Code работают триггеры:
+#   "настрой AF", "добавь фичу по AF", "проведи дрейф-аудит"
+#   /agent-first-setup — вызов через slash-команду
+```
+
+### Вариант B: Использовать с любым другим агентом
+
+```bash
+# Скопировать AGENTS.md в корень нового проекта
+cp agent-first-skill/AGENTS.md /path/to/new-project/AGENTS.md
+
+# Опционально: положить методологию в проект
+mkdir -p /path/to/new-project/documentation
+cp agent-first-skill/agent-first.md /path/to/new-project/documentation/agent-first-guide.md
+```
+
+Агент (Cursor / Cline / Aider / etc.) автоматически прочитает `AGENTS.md` и будет следовать правилам.
+
+### Вариант C: Бутстрап нового проекта с нуля
+
+1. Создай папку проекта
+2. Положи `AGENTS.md` в корень
+3. Положи `agent-first.md` в `documentation/agent-first-guide.md`
+4. Скажи агенту: **«Настрой этот проект по AF, см. documentation/agent-first-guide.md»**
+5. Агент создаст `project.yaml`, манифест слоя, `validate.py`, pre-commit hook
+
+---
+
+## Синхронизация содержимого
+
+Если ты правишь методологию — обновляй **все** источники:
+
+1. `agent-first-skill/skill/` — исходники скилла (этот архив)
+2. `agent-first-skill/agent-first.md` — полная методология (должна совпадать с `skill/guide.md`)
+3. `agent-first-skill/AGENTS.md` — универсальные правила для агентов
+4. `~/.claude/commands/agent-first-setup/` — установленный скилл (пересобрать из `skill/`)
+5. `documentation/agent-first-guide.md` — копия в текущем проекте (если есть)
+
+Для пересинхронизации установленного скилла:
+```bash
+rm -rf ~/.claude/commands/agent-first-setup
+cp -r agent-first-skill/skill ~/.claude/commands/agent-first-setup
+```
+
+---
+
+## Совместимость
+
+| Инструмент | Что работает |
+|---|---|
+| **Claude Code** (CLI) | ✅ Полный скилл с автотриггерами + AGENTS.md |
+| **Cursor** | ✅ AGENTS.md или .cursorrules |
+| **Cline / Roo Code** | ✅ AGENTS.md или .clinerules |
+| **Aider** | ✅ AGENTS.md или CONVENTIONS.md |
+| **Continue** | ✅ AGENTS.md |
+| **Windsurf** | ✅ AGENTS.md или .windsurfrules |
+| **GitHub Copilot** | ⚠️ Не читает файлы конвенций, но YAML-манифесты прочитает если попросишь |
+| **ChatGPT / web-агенты** | ⚠️ Нет авточтения, но можно копировать промты вручную |
+
+---
+
+## Связанные ресурсы
+
+- Full methodology: `agent-first.md`
+- Templates (project.yaml, validate.py, ci-validate.yml, generate-manifest.py, yaml-to-mermaid.py, и др.): `skill/templates/`
+- Operator guide: `skill/operator-guide.md`
+- Skill trigger phrases: `skill/SKILL.md` frontmatter

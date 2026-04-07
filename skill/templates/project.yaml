@@ -1,0 +1,30 @@
+# Super-index for the project. Agents start reading from here.
+meta:
+  name: my-project
+  created: 2026-04-05
+
+layers:
+  # Add as layer manifests are created
+  # frontend: documentation/frontend.yaml
+  # backend: documentation/backend.yaml
+
+key_files:
+  # Critical code entry points
+  # entrypoint: src/main.py
+  # config: src/config.py
+
+key_services:
+  # Important service locations
+  # auth: src/services/auth_service.py
+
+env:
+  required: []
+  optional: []
+
+tests:
+  # smoke: pytest tests/smoke/
+  run_before_merge: []
+
+observability:
+  # logs:
+  # health_check:

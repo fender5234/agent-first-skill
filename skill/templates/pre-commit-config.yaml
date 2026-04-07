@@ -1,0 +1,9 @@
+repos:
+  - repo: local
+    hooks:
+      - id: docs-sync
+        name: Validate documentation manifests
+        entry: python documentation/validate.py
+        language: system
+        pass_filenames: false
+        always_run: true

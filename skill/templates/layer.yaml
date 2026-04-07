@@ -1,0 +1,14 @@
+# Map of blocks for this layer
+blocks:
+  example-block:
+    code_path: src/features/example
+    entry: index.ts
+    summary: "Short 1-line description"
+    depends_on: []
+    related_blocks: []
+    api_calls: []
+    adr: []
+    gotchas: []
+    notes: |
+      Extended context why it works this way.
+    last_modified_context: ""
