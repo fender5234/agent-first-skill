@@ -62,6 +62,32 @@ No tests, no ADR, no YAML update needed for trivial fixes.
 ### Refactoring → Full 9-step workflow
 Tests are critical — they prove behavior is preserved. YAML update is mandatory since paths/structure likely change.
 
+### Feature review (separate clean session) → command: "Проверь Feature N по AF"
+Run in a **new session** (without implementation context) for independent verification.
+The reviewer agent MUST:
+1. Read project plan → Feature N acceptance (full list of points)
+2. Read `documentation/project.yaml` → relevant layer YAML → gotchas and notes
+3. For EACH acceptance point verify: code exists, tests exist and pass, `[manual]` items noted
+4. Run: lint, typecheck, tests, build (commands from `project.yaml → tests`)
+5. Run: `python documentation/validate.py`
+6. Verify cross-cutting rules via grep (security, naming, architecture)
+7. Output report: table of acceptance points with PASS / FAIL / MANUAL
+8. Verdict: all PASS → "ready for push/merge", any FAIL → list problems with file paths
+
+By default — **report only**, no fixes.
+If user asks to fix ("исправь", "fix"):
+- Minor (lint, missing test, typo) — fix in current session
+- Major (architecture, redesign) — warn and suggest new session
+- When fixing: apply ALL cross-cutting rules (context7, sequential-thinking, KISS/DRY/SOLID)
+- After fixes: re-run automated checks
+
+Recommended development cycle:
+```
+Session 1:  "Выполни Feature N по AF workflow"    → implementation
+Session 2:  "Проверь Feature N по AF"              → independent review
+            → all PASS → push → next feature
+```
+
 This routing applies to ALL tasks automatically, not only when user says "AF".
 
 ## Agent autonomy rules

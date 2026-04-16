@@ -1,6 +1,6 @@
 ---
 name: agent-first-setup
-description: Set up or migrate a project to agent-first architecture with YAML manifests, ADRs, validation, and pre-commit hooks. Also runs drift-audit to verify YAML manifests match reality, and guides feature-implementation workflow (when to create ADRs, which YAML fields to update). Use when user mentions "AF" (shorthand for agent-first), or asks to "setup agent-first", "make project agent-friendly", "add YAML manifests", "organize project for AI agents", "внедри agent-first", "настрой проект под агентов", "agent-first подход", "используй AF", "примени AF", "настрой AF", "проведи дрейф-аудит", "drift audit", "дрейф аудит", "проверь соответствие yaml коду", "сверь манифесты с кодом", "добавь фичу по AF", "новая фича AF", "implement feature AF", "AF workflow", "нужен ли ADR", "do I need ADR"
+description: Set up or migrate a project to agent-first architecture with YAML manifests, ADRs, validation, and pre-commit hooks. Also runs drift-audit to verify YAML manifests match reality, guides feature-implementation workflow (when to create ADRs, which YAML fields to update), and provides independent feature review in clean sessions. Use when user mentions "AF" (shorthand for agent-first), or asks to "setup agent-first", "make project agent-friendly", "add YAML manifests", "organize project for AI agents", "внедри agent-first", "настрой проект под агентов", "agent-first подход", "используй AF", "примени AF", "настрой AF", "проведи дрейф-аудит", "drift audit", "дрейф аудит", "проверь соответствие yaml коду", "сверь манифесты с кодом", "добавь фичу по AF", "новая фича AF", "implement feature AF", "AF workflow", "нужен ли ADR", "do I need ADR", "проверь Feature", "проверь фичу", "review Feature", "проверь выполненную задачу"
 ---
 
 # Agent-First Project Setup
@@ -143,6 +143,7 @@ Before starting the setup workflow, check if the user is invoking a sub-command:
 
 - **"Проведи дрейф-аудит" / "drift audit" / "дрейф аудит" / "сверь yaml с кодом"** → jump to "Drift Audit Workflow" section below, do NOT run setup steps
 - **"Добавь фичу по AF" / "новая фича AF" / "implement feature AF" / "нужен ли ADR"** → jump to "Feature Workflow" section below, do NOT run setup steps
+- **"Проверь Feature N" / "проверь фичу" / "review Feature" / "проверь выполненную задачу"** → jump to "Feature Review Workflow" section below, do NOT run setup steps
 - **Setup / migrate / "настрой AF"** → continue with workflow below
 
 ## Workflow
@@ -411,3 +412,86 @@ When routing to this workflow, present to user:
 ```
 
 Wait for user approval before creating ADR and writing code.
+
+---
+
+## Feature Review Workflow
+
+When user says "Проверь Feature N по AF" / "Review Feature N" / "Проверь выполненную задачу" — run independent review in a **clean session** (no implementation context).
+
+The purpose: a fresh agent reviews code written by another agent (or the same agent in a previous session). Like a code review by someone who didn't write the code.
+
+### Recommended development cycle
+
+```
+Session 1:  "Выполни Feature N по AF workflow"    → implementation (9-step)
+Session 2:  "Проверь Feature N по AF"              → independent review
+            → all PASS → push → next feature
+```
+
+Each feature = new session. Each review = new session. Clean context every time.
+
+### Review Steps
+
+1. **Read plan** — find Feature N acceptance criteria (full list of checkboxes)
+2. **Read manifests** — `documentation/project.yaml` → relevant layer YAML → gotchas and notes of affected blocks
+3. **Read project-specific plans** — if project has implementation plans (e.g. `db-creation-plan.md`), read relevant sections
+4. **Check each acceptance point:**
+   - File/code exists and matches description
+   - Tests exist and pass
+   - `[manual]` items — mark as "requires manual verification"
+5. **Run automated checks:**
+   - Lint, typecheck, tests, build (project-specific commands from `project.yaml → tests`)
+   - `python documentation/validate.py`
+6. **Verify cross-cutting rules** (grep-based):
+   - Security: no hardcoded secrets, no SQL concatenation
+   - Naming: consistent with project patterns
+   - Architecture: feature-based structure respected
+   - Project-specific rules (from CLAUDE.md)
+7. **Output report:** table of acceptance points with statuses (PASS / FAIL / MANUAL)
+8. **Verdict:**
+   - All PASS → "Feature N ready for push/merge"
+   - Any FAIL → list specific problems with file paths and line numbers
+
+### Fix policy
+
+By default — **report only**, no fixes.
+If user asks to fix found problems ("исправь", "почини", "fix"):
+- **Minor** (lint errors, missing test, typo) — fix in current session
+- **Major** (architecture, module redesign) — warn user and suggest new session
+- When fixing: apply ALL cross-cutting rules (context7, sequential-thinking, KISS/DRY/SOLID)
+- After fixes: re-run steps 5-6 to verify
+
+### Output format
+
+```
+📋 AF Feature Review: Feature N
+
+Acceptance:
+  ✅ PASS  — acceptance point 1 (file: src/...)
+  ✅ PASS  — acceptance point 2 (test: tests/...)
+  ❌ FAIL  — acceptance point 3: [description of problem]
+  👁 MANUAL — acceptance point 4 (requires visual check)
+
+Automated checks:
+  ✅ lint: 0 errors
+  ✅ typecheck: 0 errors
+  ✅ tests: 15 passed, 0 failed
+  ✅ build: success
+  ✅ validate.py: OK
+
+Cross-cutting rules:
+  ✅ Security: no issues found
+  ✅ Naming: consistent
+  ❌ Architecture: [specific violation]
+
+Verdict: N PASS, M FAIL, K MANUAL
+[Ready for push / Needs fixes — see FAIL items above]
+```
+
+### Critical rules for review
+
+- **DO NOT auto-fix** without user's explicit request
+- **Check EVERY acceptance point** — don't skip or summarize
+- **Be specific in FAIL descriptions** — file path, line number, what's wrong, what's expected
+- **Cross-cutting rules apply to the reviewer too** — use context7 to verify API usage is current, use sequential-thinking if unsure about a finding
