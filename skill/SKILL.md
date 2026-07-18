@@ -443,6 +443,7 @@ Each feature = new session. Each review = new session. Clean context every time.
 5. **Run automated checks:**
    - Lint, typecheck, tests, build (project-specific commands from `project.yaml → tests`)
    - `python documentation/validate.py`
+   - **Migration integrity (if the project uses DB migrations):** green tests/build do NOT prove the migrations are complete. Test suites that use schema `push`/`sync` (auto-create columns from code, bypassing the migration files) mask incomplete migration SQL — and a snapshot-vs-code drift check passes when the migration's *snapshot* is complete even though its hand-written `up()` SQL is not. So a migration can be green on every gate yet break a freshly-migrated DB (missing column/table/index at runtime). Verify separately: apply migrations from scratch to a throwaway DB (migrations-only, NOT push), diff the resulting schema against the code-derived schema, and smoke-test the app's main entrypoint (e.g. admin/home) against that DB. Prefer a repo script for this; if none exists, flag it as a gap. Highest risk on type-changing or hand-written migrations.
 6. **Verify cross-cutting rules** (grep-based):
    - Security: no hardcoded secrets, no SQL concatenation
    - Naming: consistent with project patterns
