@@ -50,13 +50,16 @@ agent-first-skill/
 ### Вариант A: Восстановить скилл в Claude Code
 
 ```bash
-# Скопировать скилл в глобальную папку Claude Code
-cp -r agent-first-skill/skill ~/.claude/commands/agent-first-setup
+# Скопировать скилл в глобальную папку скиллов Claude Code
+cp -r agent-first-skill/skill ~/.claude/skills/agent-first-setup
 
 # Теперь в Claude Code работают триггеры:
 #   "настрой AF", "добавь фичу по AF", "проведи дрейф-аудит"
 #   /agent-first-setup — вызов через slash-команду
 ```
+
+> Путь — `~/.claude/skills/`, не `~/.claude/commands/`. Скиллы и slash-команды
+> живут в разных папках; в `commands/` скилл не подхватится.
 
 ### Вариант B: Использовать с любым другим агентом
 
@@ -88,13 +91,19 @@ cp agent-first-skill/agent-first.md /path/to/new-project/documentation/agent-fir
 1. `agent-first-skill/skill/` — исходники скилла (этот архив)
 2. `agent-first-skill/agent-first.md` — полная методология (должна совпадать с `skill/guide.md`)
 3. `agent-first-skill/AGENTS.md` — универсальные правила для агентов
-4. `~/.claude/commands/agent-first-setup/` — установленный скилл (пересобрать из `skill/`)
+4. `~/.claude/skills/agent-first-setup/` — установленный скилл (пересобрать из `skill/`)
 5. `documentation/agent-first-guide.md` — копия в текущем проекте (если есть)
 
 Для пересинхронизации установленного скилла:
 ```bash
-rm -rf ~/.claude/commands/agent-first-setup
-cp -r agent-first-skill/skill ~/.claude/commands/agent-first-setup
+rm -rf ~/.claude/skills/agent-first-setup
+cp -r agent-first-skill/skill ~/.claude/skills/agent-first-setup
+```
+
+Проверить, что источники не разошлись:
+```bash
+diff -r ~/.claude/skills/agent-first-setup agent-first-skill/skill
+diff agent-first-skill/agent-first.md agent-first-skill/skill/guide.md
 ```
 
 ---

@@ -52,6 +52,7 @@ Apply these principles during implementation, not as a separate review step:
 - Before writing new code — grep the project for similar logic
 - If 70%+ overlap found — reuse, don't duplicate
 - 3 repetitions = threshold for abstraction (not before)
+- **UI widgets specifically:** before building a repeatable widget (rating stars, chip, badge, uploader, etc.) grep NOT ONLY the shared-component registry/manifest, but also `features/**` + the shared-UI dir for the visual pattern (icon name / signature class). The registry catches only what's *already* extracted; inline duplication living inside feature components is caught ONLY by grepping code. Copying the nearest open reference file is the failure mode — search first, then on the 2nd–3rd copy extract to shared.
 
 **SOLID (adapted):**
 - S — one module/class = one responsibility
@@ -155,7 +156,10 @@ Before starting the setup workflow, check if the user is invoking a sub-command:
 ### Step 2: Gather context from user
 REQUIRED before proceeding:
 - Project stack (e.g. "FastAPI + React/Vite")
-- Primary layer to start with (ONE layer, not all)
+- Which layer to start with — pick the most-touched one, since its block boundaries
+  are usually the most obvious. This is about sequencing, not about limiting scope:
+  the remaining layers can follow in the same session once each one's cutting
+  principle is agreed (see Critical rules).
 - Path to feature/module folders (e.g. "src/features/" or "web/frontend/src/features/")
 
 If user didn't provide these — ASK before scanning.
@@ -201,7 +205,16 @@ Target file: `CLAUDE.md` in the project root (NOT the skill's files).
 
 ## Critical rules
 
-- **DO NOT document everything at once** — start with ONE layer
+- **DO NOT manifest a layer before its cutting principle is agreed.** "Block = folder"
+  is right when folders already carry clean boundaries. It is wrong where a folder
+  glues unrelated modules together (a `lib/` holding SQLite, SMTP and pricing maths
+  needs block = module) or where many thin routes share one renderer (that is one
+  block, not N clones). Settle this per layer, with the user, before writing anything.
+  Covering every layer in one session is fine once each principle is agreed — what is
+  not fine is replicating a bad cut across layers.
+- **DO NOT generate placeholder blocks.** A manifest full of `summary: TODO` is worse
+  than no manifest: it looks like coverage without being coverage. If there is no time
+  to write meaningful summaries for a layer, do not start that layer.
 - **DO NOT create ADRs retrospectively** for past decisions
 - **ALWAYS STOP for user input** at these points:
   - Choosing primary layer (if not provided)
@@ -224,7 +237,12 @@ Tell the user:
 2. Run `python documentation/validate.py` to verify
 3. Make a test commit to confirm pre-commit hook works
 4. Refer to `guide.md` Appendix Д for day-to-day usage patterns
-5. DO NOT extend to other layers for 1-2 weeks — observe if current setup works
+5. Extending to the remaining layers needs no waiting period. It needs one thing:
+   the cutting principle for each new layer agreed first (see Critical rules).
+   Extend as soon as that is settled — the same session is fine. What still has to
+   be earned over real tasks is confidence that the manifest is *useful*: watch
+   whether agents read the YAML or fall back to grepping, and enrich fields
+   accordingly.
 6. Optional tools available:
    - `python documentation/generate-manifest.py <dir>` — auto-generate skeleton manifest from directory (useful for 20+ blocks)
    - `python documentation/yaml-to-mermaid.py` — generate Mermaid dependency graph on demand
