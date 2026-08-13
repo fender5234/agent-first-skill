@@ -71,7 +71,8 @@ Ask yourself:
 | Ignoring gotchas output | You miss known pitfalls, waste time on known issues | Always read them |
 | Saying "just do it" to ADR question | Skips structured decision-making, no record for future | Take 2 minutes to review the options |
 | Not adding gotchas after finding issues | Next session (yours or someone else's) hits the same problem | Spend 30 seconds adding a one-liner |
-| Expanding to all layers immediately | Manifests become stale because too much to maintain | One layer at a time, expand after 1-2 weeks |
+| Expanding to a layer before agreeing how it is cut | A wrong cut replicated across layers is far costlier than the time it saved | Settle the cutting principle for that layer first, then expand — no waiting period needed |
+| Accepting a manifest full of `summary: TODO` | It looks like coverage without being coverage, and nobody goes back to fill it | Reject it. If there is no time for meaningful summaries, do not start that layer |
 
 ---
 
