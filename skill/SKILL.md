@@ -13,7 +13,8 @@ Read `guide.md` for complete methodology, principles, and rationale.
 ## Templates (ready to copy)
 - `templates/project.yaml` — super-index for the project
 - `templates/layer.yaml` — blocks manifest template
-- `templates/validate.py` — integrity checker (paths, ADR cross-refs, orphan detection)
+- `templates/validate.py` — integrity checker (paths, ADR cross-refs, orphan detection, duplicate keys)
+- `templates/check-claude-md-sections.py` — asserts the AF sections survived setup
 - `templates/pre-commit-config.yaml` — pre-commit hook config
 - `templates/validate.sh` — unified validation script
 - `templates/adr-template.md` — ADR skeleton
@@ -138,6 +139,35 @@ Write secure code from the start, not as an afterthought:
 - Check for known vulnerabilities before adding (npm audit, pip-audit, etc.)
 - Prefer well-maintained packages with recent updates
 
+## Project-specific rules — the Hard Rules pattern
+
+The seven rules above are universal. Every real project also accumulates rules that
+are true only for it: "in this codebase, never call X directly — it deadlocks",
+"every schema change needs a migration file in the same commit". These are the ones
+that actually cause outages, and prose in CLAUDE.md does not hold them.
+
+**A project rule is not finished until it has all four of these:**
+
+| Layer | What it is | Why it alone is not enough |
+|---|---|---|
+| 1. **Statement** | one line in CLAUDE.md: "Don't X — it causes Y" | Prose is skippable. Agents read past it under load |
+| 2. **Executable check** | a grep or a script that exits non-zero on violation | Without a machine check, compliance is self-reported |
+| 3. **Pre-commit hook** | the check wired into `.pre-commit-config.yaml`, scoped by `files:` to the paths it applies to | An unwired script rots. It goes red and nobody notices |
+| 4. **Review checklist item** | the same check named in the Feature Review Workflow | Pre-commit can be bypassed with `--no-verify`; the clean-session review cannot |
+
+Give each rule a short stable id (`H-1`, `V-1`, `E-1`) and use that id in all four
+places, so a failing hook, a checklist line and a CLAUDE.md paragraph are visibly
+the same rule.
+
+**Maintain a registry** in CLAUDE.md — id, one-line statement, path to the checking
+script. Start it empty. Do NOT copy another project's rules into it: they are
+domain-specific by construction, and a checklist full of rules that do not apply
+trains the agent to skim the ones that do.
+
+**A red check that gates nothing is worse than no check** — it looks like coverage
+while providing none. If a check cannot be wired into a hook yet, say so where it
+is defined and record why.
+
 ## Command routing
 
 Before starting the setup workflow, check if the user is invoking a sub-command:
@@ -164,6 +194,21 @@ REQUIRED before proceeding:
 
 If user didn't provide these — ASK before scanning.
 
+**Also ask these four — they decide which optional sections get generated.** Each
+one, if generated blindly, either breaks the project or fills a mandatory checklist
+with rules that do not apply. Noise in a mandatory checklist teaches the agent to
+skim it, which costs more than the missing rule would have.
+
+| Question | If yes | If no |
+|---|---|---|
+| **Deploy model** — does a push to the default branch deploy? | Branch + local merge. Do NOT generate a `check-not-main` guard or a PR gate — they would break the deploy path | Branch + PR + review gate; generate the `check-not-main` pre-commit guard |
+| **Database migrations?** | Generate the migration-integrity items in Self-Check and Feature Review (see the migration paragraph in Review step 5) | Omit them entirely |
+| **External feature plan** (`plan.md` or similar) with acceptance criteria? | Generate a "Reading order" section and point Review step 1 at that file | Review step 1 reads the task description instead |
+| **Startup checks needed** (Docker, tunnels, external services, seeded DB)? | Generate a "Session startup checks" section with the branches the user describes | Omit — a startup section listing nothing is worse than none |
+
+Record the answers; they are also what a future agent needs in order to understand
+why a section is present or absent.
+
 ### Step 3: Inventory (existing projects only)
 - Scan the chosen layer's folder structure
 - Propose block breakdown: list of blocks with code_path, entry, 1-line summary
@@ -174,7 +219,8 @@ Copy and adapt templates to project:
 - `templates/project.yaml` → `documentation/project.yaml`
 - `templates/layer.yaml` → `documentation/<layer>.yaml` (filled with approved blocks)
 - `templates/validate.py` → `documentation/validate.py` (adapt paths to project)
-- `templates/pre-commit-config.yaml` → `.pre-commit-config.yaml`
+- `templates/check-claude-md-sections.py` → `documentation/check-claude-md-sections.py`
+- `templates/pre-commit-config.yaml` → `.pre-commit-config.yaml` (delete or enable the `check-not-main` hook per the deploy-model answer from Step 2)
 - `templates/validate.sh` → `scripts/validate.sh`
 - `templates/generate-manifest.py` → `documentation/generate-manifest.py` (optional, for 20+ blocks)
 - `templates/yaml-to-mermaid.py` → `documentation/yaml-to-mermaid.py` (optional, on-demand graphs)
@@ -190,16 +236,31 @@ Target file: `CLAUDE.md` in the project root (NOT the skill's files).
 
 **Sections to add:**
 - `## Agent entry points` — tells future agents to start from project.yaml
+- `## Task routing` — incl. Step 0 size check and the Self-Check checklist
 - `## When refactoring` — enforces manifest updates
+- `## Git workflow` — branch per task; merge model filled in from Step 2
 - `## Agent autonomy rules` — Do/Ask/Never lists
+- `## Project-specific rules (Hard Rules)` — empty registry, filled from this project's incidents
+- `## Closed investigations` — empty, filled as questions get settled
 - `## Self-maintaining documentation rules` — rules for auto-updating gotchas
+
+Omit only the sections Step 2's answers rule out, and say which ones and why.
 
 **Placement:** insert new sections near the top of CLAUDE.md (after the project overview but before detailed commands), so future agents see them early.
 
 **After updating:** show user a diff of what was added and ask for confirmation before saving.
 
+**Then run `python documentation/check-claude-md-sections.py`.** The approval step
+above is where sections get lost — a long diff gets trimmed and nothing afterwards
+notices. Do not skip this because the diff "looked complete"; that judgement is
+exactly what the check exists to replace.
+
 ### Step 6: Verify
 - Run `python documentation/validate.py` — must output "OK"
+- Run `python documentation/check-claude-md-sections.py` — must output "OK". This is
+  the step that catches a Step 5 diff that got trimmed during approval. **Do not
+  report setup as complete while it exits non-zero**: report which sections are
+  missing and either restore them or record why they are deliberately absent
 - Tell user to run `pip install pre-commit && pre-commit install`
 - Suggest user makes a test commit
 
@@ -331,6 +392,35 @@ Applies to ALL tasks automatically. Route by task type:
 
 See `guide.md` Appendix Е for full reference.
 
+### Step 0: Size check — does this fit in one reviewable unit?
+
+Before orienting, check the task fits. The binding constraint is not "how long will
+this take" — it is:
+
+> **Can a reviewer agent, in a clean session with no implementation context, verify
+> EVERY acceptance point of this task?**
+
+If no → split before starting. A task too large to review is a task that never
+closes: the Definition of Done never goes fully green, and the review either gets
+skipped or degrades into skimming.
+
+**Each part after splitting must have:**
+- **One cognitively whole artifact** — one page, one endpoint group, one algorithm.
+  Not "half of the auth system"
+- **Its own acceptance criteria** — checkable independently
+- **An explicit `Out of scope` list** — what this part deliberately does NOT do.
+  This is the anti-scope-creep device; without it parts leak into each other
+- **Declared dependencies and order** — what blocks what, what can run in parallel
+- **Independently mergeable** — each part is a working state, not a half-migration
+
+**Naming:** if the plan calls the whole thing Feature N, parts are N-a, N-b, N-c.
+Keep the umbrella name in forward references so links from ADRs and manifests
+don't break.
+
+**Do not split** when the parts would leave the repo in a broken intermediate
+state, or when a part has no acceptance criteria of its own. Then it is one task,
+and the honest move is to say the review will need more than one session.
+
 ### Feature Workflow Steps (9 steps)
 
 1. **Orient** — read `documentation/project.yaml` to find affected layers
@@ -341,7 +431,27 @@ See `guide.md` Appendix Е for full reference.
    - Did deciding take >10 minutes?
    - All YES → create ADR BEFORE implementation, link via `adr: [N]` in block
    - Any NO → skip ADR, just implement
-4. **Write tests** — write tests for key scenarios of the module BEFORE implementation. Not per function — per module. Cover main success paths, edge cases, error handling
+4. **Confirm the APIs, then write tests** — in that order:
+   - **4.0 — context7 gate, MANDATORY, before the first `Edit`/`Write` of the task.**
+     List every external library this task will touch — framework, ORM, validation,
+     **test runner, assertion and mocking libraries**, build tool, plugins. For each,
+     resolve it and query current docs. The point is to confirm the APIs you are
+     about to call still exist and are not deprecated in the major version this
+     project pins. **Training data is not an acceptable source.** If an API cannot
+     be confirmed in the docs — do not write anything; confirm it or escalate.
+   - **4.1 — write tests** for key scenarios of the module, BEFORE implementation.
+     Not per function — per module. Cover main success paths, edge cases, error
+     handling.
+
+   **The gate fires before the tests, not after.** Test files are code: they call
+   the runner's API, the assertion API, the mocking API, and the API of the module
+   under test. Tests written from memory fail for the wrong reason, and — worse —
+   pin the implementation to an API that was imagined. Any workflow that numbers
+   "write tests" ahead of the context7 gate contradicts itself, because writing a
+   test IS the first `Write`.
+
+   Why a gate and not a checklist item: a checkbox ticked after the fact costs
+   nothing and gets ticked anyway. A gate before the first edit does not.
 5. **Implement** — write the feature code, run tests. Green → continue. Red → fix → rerun
 6. **Update YAML** for affected blocks if changed:
    - `code_path` / `entry` — if files moved
@@ -351,7 +461,7 @@ See `guide.md` Appendix Е for full reference.
    - `depends_on` / `related_blocks` — if connections changed
 7. **Add gotcha** — if stumbled on non-obvious issue (budget: 1-2 per session)
 8. **Self-Check** — before committing, verify code against cross-cutting rules:
-   - [ ] context7: checked current docs for all libs/frameworks used?
+   - [ ] context7: **verify step 4.0 actually happened before the first `Edit`/`Write` — tests included** — this box is verification that the gate was passed, NOT a substitute for it. Ticking it post-hoc after writing code from memory is the failure mode this wording exists to prevent
    - [ ] sequential-thinking: used for all non-trivial decisions during implementation?
    - [ ] KISS: no functions > 40 lines, no nesting > 3 levels?
    - [ ] DRY: grepped project for similar logic, no unnecessary duplication?
@@ -394,6 +504,16 @@ Create ADR ONLY if all 3 are true:
 
 ### Critical rules for feature workflow
 
+- **One task = one branch.** Create the branch BEFORE the first commit, never work
+  directly on the default branch. Name it `<type>/<scope>-<slug>` mirroring the
+  commit convention — `feat/f11a-taxonomies`, `fix/reviews-depth-bug`,
+  `docs/seo-plan`. This is independent of whether the project uses pull requests:
+  branching costs nothing on a solo repo and keeps an escape hatch when a task
+  turns out wrong. Whether the branch then goes through a PR with a review gate,
+  or is merged locally, is a per-project answer — see Step 2 of setup.
+- **A task is not done until it has been reviewed in a clean session.** Run the
+  Feature Review Workflow below before merging. Self-review by the agent that wrote
+  the code is not a review — it is the same context grading its own work.
 - **ADR BEFORE implementation, never after** — retrospective ADRs are forbidden
 - **If you start coding and realize "this is a real choice"** — stop, write ADR, then continue
 - **Update YAML as you go** — don't defer to "cleanup pass later"
@@ -438,6 +558,12 @@ Wait for user approval before creating ADR and writing code.
 When user says "Проверь Feature N по AF" / "Review Feature N" / "Проверь выполненную задачу" — run independent review in a **clean session** (no implementation context).
 
 The purpose: a fresh agent reviews code written by another agent (or the same agent in a previous session). Like a code review by someone who didn't write the code.
+
+**This is a gate, not an optional command.** No task merges into the default branch
+until it has passed a review in a clean session. Where a project has CI, this runs
+alongside it; where CI is absent or frozen, it is the ONLY gate — say so explicitly
+in the project's CLAUDE.md so nobody treats it as advisory. The one exception is
+trivial changes (typo, copy, styling) routed to the Light workflow.
 
 ### Recommended development cycle
 

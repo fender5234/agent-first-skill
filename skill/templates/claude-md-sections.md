@@ -15,19 +15,44 @@ ALWAYS start here when working on this project:
 
 Before starting any task, classify it and follow the appropriate workflow:
 
+### Step 0 (all workflows) — does the task fit in one reviewable unit?
+
+The binding question is not "how long will this take" but:
+
+> **Can a reviewer agent, in a clean session with no implementation context,
+> verify EVERY acceptance point of this task?**
+
+If no → split before starting. A task too large to review never closes: the
+Definition of Done never goes fully green and the review degrades into skimming.
+
+Each part after splitting must have: one cognitively whole artifact; its own
+acceptance criteria; an explicit **Out of scope** list; declared dependencies and
+order; and an independently mergeable end state. Name parts `N-a`, `N-b`, `N-c`
+and keep the umbrella name in forward references.
+
+Do NOT split when the parts would leave the repo in a broken intermediate state,
+or when a part has no acceptance criteria of its own.
+
 ### New feature / new module → Full 9-step workflow
+0. Size check — see Step 0 above; branch before the first commit
 1. Orient — read project.yaml, find affected blocks
 2. Read block context — output gotchas to user (mandatory)
 3. ADR decision — apply 3-criteria rule
-4. Write tests — key scenarios per module, BEFORE implementation
-5. Implement — with context7, sequential-thinking, KISS/DRY/SOLID/Feature-Based
+4. **4.0: context7 gate BEFORE the first Edit/Write** — confirm against current docs
+   every library API this task touches, **including the test runner, assertion and
+   mocking libraries**; training data is not a source; API unconfirmed → write
+   nothing. **4.1:** tests for key scenarios per module, BEFORE implementation.
+   The gate fires BEFORE the tests — a test file is code, and writing one IS the
+   first Write. Tests written from memory fail for the wrong reason and pin the
+   implementation to an imagined API
+5. Implement — code with sequential-thinking, KISS/DRY/SOLID/Feature-Based
 6. Run tests — green → continue, red → fix
 7. Update YAML — manifests of affected blocks
 8. Self-Check — verify code against all cross-cutting rules (see checklist below)
-9. Commit — pre-commit validates
+9. Commit — pre-commit validates. Then review in a clean session before merge
 
 ### Self-Check checklist (step 8)
-- [ ] context7: checked current docs for all libs/frameworks used?
+- [ ] context7: **verify step 4.0 happened BEFORE the first Edit/Write — tests included** — this box confirms the gate was passed, it does not replace it. Ticking it afterwards, having written the code from memory, is the failure this wording exists to prevent
 - [ ] sequential-thinking: used for all non-trivial decisions during implementation?
 - [ ] KISS: no functions > 40 lines, no nesting > 3 levels?
 - [ ] DRY: grepped project for similar logic, no unnecessary duplication?
@@ -63,6 +88,12 @@ No tests, no ADR, no YAML update needed for trivial fixes.
 Tests are critical — they prove behavior is preserved. YAML update is mandatory since paths/structure likely change.
 
 ### Feature review (separate clean session) → command: "Проверь Feature N по AF"
+
+**This is a gate, not an optional command.** Nothing merges into the default branch
+until it has passed a review in a clean session. Where CI exists this runs alongside
+it; where CI is absent or frozen, it is the ONLY gate — say so here explicitly so
+nobody reads it as advisory. Exception: trivial changes routed to the Light workflow.
+
 Run in a **new session** (without implementation context) for independent verification.
 The reviewer agent MUST:
 1. Read project plan → Feature N acceptance (full list of points)
@@ -90,6 +121,24 @@ Session 2:  "Проверь Feature N по AF"              → independent revi
 
 This routing applies to ALL tasks automatically, not only when user says "AF".
 
+## Git workflow
+
+**One task = one branch.** Create it BEFORE the first commit; never work directly
+on the default branch. Name it `<type>/<scope>-<slug>` mirroring the commit
+convention: `feat/f11a-taxonomies`, `fix/reviews-depth-bug`, `docs/seo-plan`.
+
+Branching costs nothing on a solo repo and keeps an escape hatch when a task turns
+out wrong. It is independent of whether the project uses pull requests.
+
+> **Fill in during setup — how does this project merge?**
+>
+> - **Push to the default branch deploys** → branch, then merge locally. Do NOT add
+>   a `check-not-main` guard or a PR gate; they would break the deploy path.
+> - **PR-based** → branch, open a PR, merge only after a green CI run AND a clean-session
+>   review. Add the `check-not-main` pre-commit guard.
+>
+> Delete the branch that does not apply and state which model this project uses.
+
 ## Agent autonomy rules
 
 ### Do without asking:
@@ -97,6 +146,7 @@ This routing applies to ALL tasks automatically, not only when user says "AF".
 - Run `scripts/validate.sh`
 - Update YAML manifests after refactoring
 - Create new ADRs when making decisions
+- Create a branch for the task
 
 ### Ask before:
 - Deleting files
@@ -104,11 +154,14 @@ This routing applies to ALL tasks automatically, not only when user says "AF".
 - Touching .env or config
 - Deploying to production
 - Modifying existing ADRs (they are append-only)
+- Merging without a clean-session review pass
 
 ### Never do:
+- Commit directly to the default branch — always work in a task branch
 - push --force
 - Commit secrets / .env
 - Modify ADRs retroactively (create new one with "supersedes N")
+- Skip pre-commit hooks (`--no-verify`)
 
 ## Cross-cutting quality rules
 
@@ -154,6 +207,45 @@ Structure: problem → options → trade-offs → decision. If you hit a fork du
 - Never log sensitive data (passwords, tokens, PII)
 - No CORS wildcard (*) in production; no secrets in version control
 - Check new dependencies for known vulnerabilities before adding
+
+## Project-specific rules (Hard Rules)
+
+Rules true only for this codebase — "never call X directly, it deadlocks", "every
+schema change needs a migration in the same commit". These cause the outages, and
+prose alone does not hold them.
+
+**A rule is not finished until it has all four layers.** Give it a short stable id
+and use that id in every layer, so a failing hook and a checklist line are visibly
+the same rule.
+
+| Layer | What |
+|---|---|
+| 1. Statement | one line here: "Don't X — it causes Y" |
+| 2. Executable check | a grep or script that exits non-zero on violation |
+| 3. Pre-commit hook | the check wired into `.pre-commit-config.yaml`, scoped with `files:` |
+| 4. Review item | the same check named in the clean-session review |
+
+**A red check that gates nothing is worse than no check** — it looks like coverage
+while providing none. If one cannot be wired up yet, record that here with the reason.
+
+### Registry
+
+Start empty; fill from this project's own incidents. Do NOT copy rules from another
+project — they are domain-specific by construction, and a checklist full of rules
+that do not apply trains the agent to skim the ones that do.
+
+| id | rule | check |
+|---|---|---|
+| — | *(none yet)* | — |
+
+## Closed investigations — do NOT re-open
+
+Questions already settled, with the answer and the date. Without this an agent
+re-investigates the same dead end every few months, at full cost each time.
+
+Format: **`<topic>` — CLOSED `<date>`.** `<conclusion>` `<where the evidence lives>`
+
+- *(none yet)*
 
 ## Self-maintaining documentation rules
 

@@ -1,5 +1,7 @@
 # Agent-First Skill (Portable Archive)
 
+**Версия 1.1.0** — история изменений в [`CHANGELOG.md`](CHANGELOG.md).
+
 Резервная копия методологии Agent-First и скилла `agent-first-setup`.
 Используется для переноса на новую машину или восстановления после потери данных.
 
@@ -8,6 +10,9 @@
 ```
 agent-first-skill/
 ├── README.md              ← этот файл
+├── CHANGELOG.md           ← что менялось и почему
+├── IMPROVEMENT_PLAN.md    ← бэклог доработок методологии
+├── updateWorkflow.md      ← как оператор ведёт проект от ТЗ до сдачи
 ├── agent-first.md         ← полная методология AF (справочник)
 ├── AGENTS.md              ← универсальные правила для любого AI-агента
 └── skill/                 ← готовый скилл для Claude Code
@@ -18,6 +23,7 @@ agent-first-skill/
         ├── project.yaml
         ├── layer.yaml
         ├── validate.py
+        ├── check-claude-md-sections.py
         ├── pre-commit-config.yaml
         ├── validate.sh
         ├── adr-template.md
@@ -93,6 +99,16 @@ cp agent-first-skill/agent-first.md /path/to/new-project/documentation/agent-fir
 3. `agent-first-skill/AGENTS.md` — универсальные правила для агентов
 4. `~/.claude/skills/agent-first-setup/` — установленный скилл (пересобрать из `skill/`)
 5. `documentation/agent-first-guide.md` — копия в текущем проекте (если есть)
+6. `agent-first-skill/CHANGELOG.md` — запись о том, что и зачем изменилось
+7. версия в шапке этого README
+
+Правило, которое легко нарушить: правка только в `skill/` расходится с `AGENTS.md`,
+и проекты на Cursor/Cline/Aider тихо остаются на старых правилах — валидатор этого
+не видит, он проверяет манифесты, а не инструкции.
+
+Приложение А.3 в `guide.md` содержит листинг `validate.py` — он **производный** от
+`skill/templates/validate.py`. При правке шаблона листинг перегенерировать, вручную
+не синхронизировать.
 
 Для пересинхронизации установленного скилла:
 ```bash

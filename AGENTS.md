@@ -16,19 +16,46 @@ ALWAYS start here when working on this project:
 
 ## Task routing — choose workflow by task type
 
+### Step 0 (all workflows) — does the task fit in one reviewable unit?
+
+The binding question is not "how long will this take" but:
+
+> **Can a reviewer, in a clean session with no implementation context, verify
+> EVERY acceptance point of this task?**
+
+If no → split before starting. A task too large to review never closes: the
+Definition of Done never goes fully green and the review degrades into skimming.
+
+Each part after splitting must have: one cognitively whole artifact; its own
+acceptance criteria; an explicit **Out of scope** list; declared dependencies and
+order; an independently mergeable end state. Name parts `N-a`, `N-b`, `N-c`.
+
+Do NOT split when the parts would leave the repo in a broken intermediate state,
+or when a part has no acceptance criteria of its own.
+
 ### New feature / new module → Full 9-step workflow
+0. Size check — see Step 0 above; create the branch BEFORE the first commit
 1. Orient — read project.yaml, find affected blocks
 2. Read block context — output gotchas to user (mandatory)
 3. ADR decision — apply 3-criteria rule
-4. Write tests — key scenarios per module, BEFORE implementation
-5. Implement — with context7, sequential-thinking, KISS/DRY/SOLID/Feature-Based
+4. **4.0: context7 gate BEFORE the first edit or write.** Confirm against current
+   docs every library API this task will touch, **including the test runner,
+   assertion and mocking libraries**; training data is not an acceptable source;
+   if an API cannot be confirmed, write nothing — confirm it or escalate.
+   **4.1:** write tests for key scenarios per module, BEFORE implementation.
+   The gate fires BEFORE the tests: a test file is code — it calls the runner's
+   API, the assertion API, the mocking API, and the API of the module under test.
+   Tests written from memory fail for the wrong reason and pin the implementation
+   to an imagined API. "Write tests, then check docs" contradicts itself, because
+   writing a test IS the first write.
+5. Implement — code with sequential-thinking, KISS/DRY/SOLID/Feature-Based
 6. Run tests — green → continue, red → fix
 7. Update YAML — manifests of affected blocks
 8. Self-Check — verify code against all cross-cutting rules (see checklist below)
-9. Commit — pre-commit validates
+9. Commit — pre-commit validates. Then review in a clean session before merge
 
 ### Self-Check checklist (step 8)
-- [ ] context7: checked current docs for all libs/frameworks used?
+- [ ] context7: **verify step 4.0 happened BEFORE the first edit — tests included** — this box confirms the gate was passed, it does not replace it
 - [ ] sequential-thinking: used for all non-trivial decisions during implementation?
 - [ ] KISS: no functions > 40 lines, no nesting > 3 levels?
 - [ ] DRY: grepped project for similar logic, no unnecessary duplication?
@@ -124,6 +151,41 @@ When editing a block:
 
 Do NOT pre-fill gotchas from code analysis. Only add gotchas from real problems you encountered.
 
+## Project-specific rules (Hard Rules)
+
+Rules true only for this codebase — "never call X directly, it deadlocks", "every
+schema change needs a migration in the same commit". These cause the outages, and
+prose alone does not hold them.
+
+**A rule is not finished until it has all four layers.** Give it a short stable id
+(`H-1`, `V-1`) and use that id in every layer, so a failing hook and a checklist
+line are visibly the same rule.
+
+1. **Statement** — one line here: "Don't X — it causes Y"
+2. **Executable check** — a grep or script that exits non-zero on violation
+3. **Pre-commit hook** — the check wired in, scoped with `files:` to the paths it covers
+4. **Review item** — the same check named in the clean-session review
+
+**A red check that gates nothing is worse than no check** — it looks like coverage
+while providing none.
+
+Registry starts empty and is filled from this project's own incidents. Do NOT copy
+rules from another project: they are domain-specific by construction, and a
+checklist full of rules that do not apply trains the agent to skim the ones that do.
+
+| id | rule | check |
+|---|---|---|
+| — | *(none yet)* | — |
+
+## Closed investigations — do NOT re-open
+
+Questions already settled, with the answer and the date. Without this an agent
+re-investigates the same dead end every few months, at full cost each time.
+
+Format: **`<topic>` — CLOSED `<date>`.** `<conclusion>` `<where the evidence lives>`
+
+- *(none yet)*
+
 ## Cross-cutting quality rules (apply to ALL stages)
 
 ### 1. Always use context7 for documentation
@@ -171,6 +233,29 @@ Apply during implementation, not as a separate review step:
 - No CORS wildcard (*) in production; no secrets in version control
 - Check new dependencies for known vulnerabilities before adding
 
+## Git workflow
+
+**One task = one branch.** Create it BEFORE the first commit; never work directly
+on the default branch. Name it `<type>/<scope>-<slug>` mirroring the commit
+convention: `feat/f11a-taxonomies`, `fix/reviews-depth-bug`, `docs/seo-plan`.
+
+Branching costs nothing on a solo repo and keeps an escape hatch when a task turns
+out wrong. It is independent of whether the project uses pull requests.
+
+The merge model is per-project — check which one applies here:
+- **Push to the default branch deploys** → branch, then merge locally. No
+  `check-not-main` guard, no PR gate; they would break the deploy path.
+- **PR-based** → branch, open a PR, merge only after green CI AND a clean-session
+  review.
+
+## Review is a gate, not a command
+
+Nothing merges into the default branch until it has been reviewed in a clean
+session with no implementation context. Self-review by the agent that wrote the
+code is not a review — it is the same context grading its own work. Where CI is
+absent or frozen, this is the ONLY gate. Exception: trivial changes (typo, copy,
+styling) on the Light workflow.
+
 ## Agent autonomy rules
 
 ### Do without asking:
@@ -178,6 +263,7 @@ Apply during implementation, not as a separate review step:
 - Run `scripts/validate.sh` or `python documentation/validate.py`
 - Update YAML manifests after refactoring
 - Create new ADRs when making architectural decisions
+- Create a branch for the task
 
 ### Ask before:
 - Deleting files
@@ -185,8 +271,10 @@ Apply during implementation, not as a separate review step:
 - Touching `.env` or config files
 - Deploying to production
 - Modifying existing ADRs (they are append-only)
+- Merging without a clean-session review pass
 
 ### Never do:
+- Commit directly to the default branch — always work in a task branch
 - `git push --force`
 - Commit secrets or `.env` files
 - Modify ADRs retroactively (create new one with "supersedes N" instead)
@@ -212,12 +300,13 @@ Every 2-4 weeks (or after major refactoring), user may run drift audit. When use
 
 ```
 documentation/
-├── project.yaml              ← super-index, entry point for agents
-├── <layer>.yaml              ← blocks manifest per layer
-├── validate.py               ← integrity checker
-├── agent-first-guide.md      ← full methodology
+├── project.yaml                    ← super-index, entry point for agents
+├── <layer>.yaml                    ← blocks manifest per layer
+├── validate.py                     ← integrity checker (incl. duplicate-key guard)
+├── check-claude-md-sections.py     ← asserts AF sections survived edits
+├── agent-first-guide.md            ← full methodology
 └── adr/
-    └── NNN-*.md              ← append-only decision records
+    └── NNN-*.md                    ← append-only decision records
 
 scripts/
 └── validate.sh               ← unified validation command

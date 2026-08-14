@@ -14,7 +14,25 @@ Current coverage: ~14/20 recommendations (70%). Goal: 90%+.
 
 ---
 
+> **Статус на 2026-08-15.** Три High Priority пункта закрыты — они были сделаны ещё
+> до версии 1.0.0, но в плане числились открытыми. Отмечены ниже. Остальные девять
+> не начаты. Отдельно: часть находок 1.1.0 (правило размера задачи, ветки, гейт
+> ревью, паттерн Hard Rules) в этот список не входила вообще — они пришли не из
+> статей, а из сверки с двумя живыми проектами. См. `CHANGELOG.md`.
+
 ## High Priority
+
+- [x] **Naming conventions** — add as cross-cutting rule 6 — **DONE до 1.0.0.**
+      Сквозное правило 6 в `SKILL.md`, `guide.md`, `AGENTS.md`,
+      `claude-md-sections.md`; три пункта в Self-Check
+- [x] **Security checklist** — add to Self-Check (step 8) — **DONE до 1.0.0.**
+      Сквозное правило 7 + шесть пунктов в Self-Check
+- [x] **Explicit edge cases** — **DONE до 1.0.0.** Список граничных условий в
+      сквозном правиле 4 (Test-First): null/undefined/пустые, пустые коллекции,
+      сетевые ошибки и таймауты, 4xx/5xx, невалидный ввод, гонки, граничные значения
+
+<details>
+<summary>Исходные формулировки закрытых пунктов</summary>
 
 - [ ] **Naming conventions** — add as cross-cutting rule 6
   - Explicit rules for naming: files, variables, functions, modules
@@ -32,6 +50,8 @@ Current coverage: ~14/20 recommendations (70%). Goal: 90%+.
   - Document boundary conditions: null, empty arrays, timeouts, race conditions
   - Don't assume agent "understands" — make implicit knowledge explicit
   - Files: guide.md (new section or extend gotchas format)
+
+</details>
 
 ## Medium Priority
 
@@ -91,5 +111,11 @@ Current coverage: ~14/20 recommendations (70%). Goal: 90%+.
 ## Progress
 
 - Total items: 12
-- Completed: 0
+- Completed: 3 (все High Priority, закрыты до 1.0.0 — счётчик не обновлялся)
 - Coverage after completion: ~95%
+
+**Источник этого плана — шесть статей об agentic coding.** Он не покрывает то, что
+находится только на живых проектах: в 1.1.0 четыре из шести изменений (размер
+задачи, ветки, гейт ревью, паттерн Hard Rules) не соответствуют ни одному пункту
+здесь. Сверка с работающим проектом даёт другой класс находок, чем чтение статей;
+имеет смысл делать её отдельно и регулярно.

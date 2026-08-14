@@ -21,6 +21,48 @@ def load_yaml(path: Path) -> dict:
         return yaml.safe_load(f) or {}
 
 
+def find_duplicate_keys(path: Path) -> list[tuple[str, int]]:
+    """Duplicate keys anywhere in the file, at any nesting depth.
+
+    yaml.safe_load silently applies last-wins on duplicate keys, so a block whose
+    name is repeated — or a record whose "- name:" header was lost in an edit,
+    gluing its fields into the previous record — loads as valid YAML and every
+    other check in this file still passes. Nothing else can see it.
+
+    Implemented as a custom loader rather than a line scan: overriding the mapping
+    constructor means the real parse tree is walked, so quoted keys, anchors,
+    merge keys and block scalars are handled by PyYAML itself instead of by
+    heuristics. deep=True is what makes it recurse into nested mappings rather
+    than only checking the top level.
+
+    Returns [(key, line_number), ...].
+    """
+    if not path.exists():
+        return []
+
+    dups: list[tuple[str, int]] = []
+
+    class _DupLoader(yaml.SafeLoader):
+        pass
+
+    def construct_mapping(loader, node, deep=False):
+        loader.flatten_mapping(node)
+        seen: dict = {}
+        for key_node, value_node in node.value:
+            key = loader.construct_object(key_node, deep=deep)
+            if key in seen:
+                dups.append((key, key_node.start_mark.line + 1))
+            seen[key] = loader.construct_object(value_node, deep=deep)
+        return seen
+
+    _DupLoader.add_constructor(
+        yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, construct_mapping
+    )
+    with open(path, encoding="utf-8") as f:
+        yaml.load(f, Loader=_DupLoader)
+    return dups
+
+
 def collect_all_blocks() -> dict:
     """Load all layer manifests. Returns {block_name: (layer_file, block_data)}."""
     project = load_yaml(DOCS / "project.yaml")
@@ -131,6 +173,17 @@ def validate() -> tuple[list[str], list[str]]:
             relative = child.relative_to(ROOT).as_posix()
             if relative not in covered_paths:
                 warnings.append(f"orphan: {relative} not in any manifest block")
+
+    # 7. Duplicate-key guard. safe_load takes last-wins on duplicate keys without
+    #    saying so, so a repeated block name silently overwrites the earlier one
+    #    and every check above still passes. This is the only check that sees it.
+    if DOCS.exists():
+        for yaml_file in sorted(DOCS.glob("*.yaml")):
+            for key, line in find_duplicate_keys(yaml_file):
+                errors.append(
+                    f"{yaml_file.name}: duplicate key '{key}' at line {line} "
+                    f"(a repeated block name, or a record header lost in an edit)"
+                )
 
     return errors, warnings
 

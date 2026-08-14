@@ -198,16 +198,44 @@ ALWAYS start here:
 ```markdown
 ## Task routing — choose workflow by task type
 
+### Шаг 0 (для всех workflow) — задача влезает в одну проверяемую единицу?
+
+Вопрос не «сколько это займёт», а:
+
+> **Сможет ли агент-ревьюер в чистой сессии, без контекста реализации, проверить
+> КАЖДЫЙ acceptance-пункт этой задачи?**
+
+Нет → разбивать до начала. Задача, которую нельзя отревьюить, не закрывается
+никогда: Definition of Done не становится полностью зелёным, а ревью вырождается
+в просмотр по диагонали.
+
+Каждая часть после разбиения обязана иметь: один когнитивно цельный артефакт;
+свои acceptance-критерии; явный список **Out of scope**; объявленные зависимости
+и порядок; независимо merge'абельное состояние. Части нумеруются `N-a`, `N-b`,
+`N-c`, зонтичное имя сохраняется в forward-ссылках.
+
+НЕ разбивать, если части оставят репозиторий в сломанном промежуточном состоянии
+или если у части нет собственных критериев приёмки.
+
 ### New feature / new module → Full 9-step workflow
+0. Size check — см. Шаг 0; ветка создаётся ДО первого коммита
 1. Orient — read project.yaml, find affected blocks
 2. Read block context — output gotchas to user (mandatory)
 3. ADR decision — apply 3-criteria rule
-4. Write tests — key scenarios per module, BEFORE implementation
-5. Implement — with context7, sequential-thinking, KISS/DRY/SOLID/Feature-Based
+4. **4.0: гейт context7 ДО первого Edit/Write** — подтвердить по актуальной
+   документации API каждой библиотеки, которую задача затронет, **включая раннер
+   тестов, библиотеку ассертов и моки**; training data источником не является;
+   API не подтверждён — не писать ничего. **4.1:** тесты ключевых сценариев
+   модуля, до реализации.
+   Гейт стоит ДО тестов, а не после: тест-файл — это код, он зовёт API раннера,
+   ассертов, моков и самого модуля. Написанный по памяти, он падает по неверной
+   причине и пиннит реализацию к выдуманному API. Порядок «сначала тесты, потом
+   гейт» противоречив — написание теста и есть первый Write.
+5. Implement — код с sequential-thinking, KISS/DRY/SOLID/Feature-Based
 6. Run tests — green → continue, red → fix
 7. Update YAML — manifests of affected blocks
 8. Self-Check — verify code against all cross-cutting rules before commit
-9. Commit — pre-commit validates
+9. Commit — pre-commit validates. Затем ревью в чистой сессии перед merge
 
 ### Bug fix (logic/behavior) → Full 9-step workflow
 Same steps. ADR likely "not needed", but tests mandatory to prevent regression.
@@ -221,7 +249,29 @@ Same steps. ADR likely "not needed", but tests mandatory to prevent regression.
 ### Refactoring → Full 9-step workflow
 Tests critical — prove behavior preserved. YAML update mandatory.
 
+### Ревью — гейт, а не команда
+Ничто не мёржится в дефолтную ветку без ревью в чистой сессии. Где есть CI — идёт
+рядом с ним; где CI нет или заморожен — это единственный гейт, и так и надо
+написать в CLAUDE.md, иначе его прочитают как рекомендацию.
+
 This applies to ALL tasks automatically, not only when user says "AF".
+```
+
+**Git workflow:**
+```markdown
+## Git workflow
+
+**Одна задача = одна ветка.** Создаётся ДО первого коммита, работа напрямую в
+дефолтной ветке запрещена. Имя `<type>/<scope>-<slug>` — зеркалит формат коммитов.
+
+Ветка на соло-репозитории не стоит ничего и оставляет путь отхода, если задача
+пошла не туда. От модели мёржа это не зависит.
+
+Модель мёржа — вопрос проекта, заполняется при установке:
+- **push в дефолтную ветку деплоит** → ветка + локальный merge. Гард
+  `check-not-main` и PR-гейт НЕ ставить: они ломают путь деплоя.
+- **PR-based** → ветка + PR + merge только после зелёного CI и ревью в чистой
+  сессии. Гард `check-not-main` ставить.
 ```
 
 **Autonomy rules:**
@@ -232,17 +282,21 @@ This applies to ALL tasks automatically, not only when user says "AF".
 - Читать код
 - Запускать validate.sh
 - Обновлять YAML после рефакторинга
+- Создавать ветку под задачу
 
 ### Ask before:
 - Удалять файлы
 - Менять схему БД
 - Трогать .env / config
 - Деплоить в прод
+- Мёржить без ревью в чистой сессии
 
 ### Never do:
+- Коммитить напрямую в дефолтную ветку
 - push --force
 - Коммитить secrets
 - Менять ADR задним числом
+- Обходить pre-commit (--no-verify)
 ```
 
 ---
@@ -262,6 +316,27 @@ This applies to ALL tasks automatically, not only when user says "AF".
 - все блоки из `Affects:` в ADR существуют в манифестах
 - двусторонняя связь ADR ↔ блоки не нарушена
 - все `depends_on` и `related_blocks` ссылаются на существующие блоки
+
+**Duplicate-key guard:**
+- дублирующиеся ключи внутри одного маппинга, на любой глубине вложенности
+
+Это единственная проверка, которая видит класс тихих отказов: `yaml.safe_load`
+молча применяет last-wins на дублях ключей. Повторённое имя блока затирает
+предыдущий блок, а срезанный при правке заголовок записи (`- name:`) склеивает её
+поля с предыдущей — файл остаётся валидным YAML, и все проверки выше проходят.
+
+Реализована кастомным loader'ом с переопределённым конструктором маппинга и
+`deep=True`, а не построчным сканом: так обходится реальное дерево разбора, и
+кавычённые ключи, якоря, merge-ключи и блочные скаляры обрабатывает сам PyYAML.
+Построчная эвристика на этом ломается — проверено на манифесте в 1 МБ, где
+кавычённые ключи вида `"file.tsx":` давали 18 ложных срабатываний.
+
+**Отдельный скрипт `check-claude-md-sections.py`** проверяет, что секции AF реально
+доехали в `CLAUDE.md` и что из Self-Check не выпали пункты. Setter добавляет секции
+диффом с подтверждением от пользователя — длинный дифф подрезают, и потерянного
+потом не видит никто. Проверка ищет пункты **внутри секции Self-Check**, а не по
+всему файлу: проект может подробно рассуждать про Test-First в своей прозе, когда
+пункта в чек-листе уже нет.
 
 Запускается:
 - вручную после рефакторинга
@@ -587,6 +662,9 @@ blocks:
 
 ## А.3. Готовый `documentation/validate.py`
 
+> Авторитетная копия — `skill/templates/validate.py`. Листинг ниже сгенерирован из неё;
+> при расхождении верен шаблон, а не этот текст.
+
 ```python
 #!/usr/bin/env python3
 """Validates project documentation manifests against filesystem + cross-refs."""
@@ -609,6 +687,48 @@ def load_yaml(path: Path) -> dict:
         return {}
     with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
+
+
+def find_duplicate_keys(path: Path) -> list[tuple[str, int]]:
+    """Duplicate keys anywhere in the file, at any nesting depth.
+
+    yaml.safe_load silently applies last-wins on duplicate keys, so a block whose
+    name is repeated — or a record whose "- name:" header was lost in an edit,
+    gluing its fields into the previous record — loads as valid YAML and every
+    other check in this file still passes. Nothing else can see it.
+
+    Implemented as a custom loader rather than a line scan: overriding the mapping
+    constructor means the real parse tree is walked, so quoted keys, anchors,
+    merge keys and block scalars are handled by PyYAML itself instead of by
+    heuristics. deep=True is what makes it recurse into nested mappings rather
+    than only checking the top level.
+
+    Returns [(key, line_number), ...].
+    """
+    if not path.exists():
+        return []
+
+    dups: list[tuple[str, int]] = []
+
+    class _DupLoader(yaml.SafeLoader):
+        pass
+
+    def construct_mapping(loader, node, deep=False):
+        loader.flatten_mapping(node)
+        seen: dict = {}
+        for key_node, value_node in node.value:
+            key = loader.construct_object(key_node, deep=deep)
+            if key in seen:
+                dups.append((key, key_node.start_mark.line + 1))
+            seen[key] = loader.construct_object(value_node, deep=deep)
+        return seen
+
+    _DupLoader.add_constructor(
+        yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, construct_mapping
+    )
+    with open(path, encoding="utf-8") as f:
+        yaml.load(f, Loader=_DupLoader)
+    return dups
 
 
 def collect_all_blocks() -> dict:
@@ -721,6 +841,17 @@ def validate() -> tuple[list[str], list[str]]:
             relative = child.relative_to(ROOT).as_posix()
             if relative not in covered_paths:
                 warnings.append(f"orphan: {relative} not in any manifest block")
+
+    # 7. Duplicate-key guard. safe_load takes last-wins on duplicate keys without
+    #    saying so, so a repeated block name silently overwrites the earlier one
+    #    and every check above still passes. This is the only check that sees it.
+    if DOCS.exists():
+        for yaml_file in sorted(DOCS.glob("*.yaml")):
+            for key, line in find_duplicate_keys(yaml_file):
+                errors.append(
+                    f"{yaml_file.name}: duplicate key '{key}' at line {line} "
+                    f"(a repeated block name, or a record header lost in an edit)"
+                )
 
     return errors, warnings
 

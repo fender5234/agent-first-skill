@@ -7,3 +7,24 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+
+      # Asserts the AF sections survived setup and later edits of CLAUDE.md.
+      # Scoped with `files:` so it runs only when the instructions themselves
+      # change — an always_run version would just add latency to every commit.
+      - id: claude-md-sections
+        name: AF sections present in agent instructions
+        entry: python documentation/check-claude-md-sections.py
+        language: system
+        pass_filenames: false
+        files: ^(CLAUDE\.md|AGENTS\.md)$
+
+      # PR-based projects only. Blocks commits made directly on the default
+      # branch. DELETE this hook if a push to the default branch is how this
+      # project deploys — there it breaks the deploy path instead of guarding it.
+      # Requires scripts/check-not-main.py; write it when enabling the hook.
+      # - id: check-not-main
+      #   name: no direct commits to the default branch
+      #   entry: python scripts/check-not-main.py
+      #   language: system
+      #   pass_filenames: false
+      #   always_run: true
