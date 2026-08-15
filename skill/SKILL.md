@@ -19,6 +19,7 @@ Workflow diffs a project's `meta.af_version` against it.
 - `templates/check-claude-md-sections.py` — asserts the AF sections survived setup
 - `templates/check-adr-append-only.py` — an ADR's decision is immutable, its `Affects:` index is not
 - `templates/check-gotcha-budget.py` — caps gotchas added to pre-existing blocks
+- `templates/check-not-main.py` — refuses `git commit` on the default branch
 - `templates/pre-commit-config.yaml` — pre-commit hook config
 - `templates/validate.sh` — unified validation script
 - `templates/adr-template.md` — ADR skeleton
@@ -164,9 +165,14 @@ places, so a failing hook, a checklist line and a CLAUDE.md paragraph are visibl
 the same rule.
 
 **Maintain a registry** in CLAUDE.md — id, one-line statement, path to the checking
-script. Start it empty. Do NOT copy another project's rules into it: they are
-domain-specific by construction, and a checklist full of rules that do not apply
-trains the agent to skim the ones that do.
+script, and which of the four layers it actually has.
+
+"Start empty" means empty of BORROWED rules — do not copy another project's, they
+are domain-specific by construction and a checklist full of inapplicable rules
+trains the agent to skim the ones that apply. It does NOT mean an empty table when
+the project already has such rules: an existing check with layers 1, 2 and 4 but no
+hook belongs in the registry on day one, with the missing layer named. An
+unregistered rule is one nobody can see is half-built.
 
 **A red check that gates nothing is worse than no check** — it looks like coverage
 while providing none. If a check cannot be wired into a hook yet, say so where it
@@ -206,6 +212,10 @@ REQUIRED before proceeding:
 
 If user didn't provide these — ASK before scanning.
 
+**Ask them in the language of the conversation.** The table below is reference
+material, not a script to read out: quoting it verbatim asks a Russian-speaking
+user four questions in English for no reason.
+
 **Also ask these four — they decide which optional sections get generated.** Each
 one, if generated blindly, either breaks the project or fills a mandatory checklist
 with rules that do not apply. Noise in a mandatory checklist teaches the agent to
@@ -215,7 +225,7 @@ skim it, which costs more than the missing rule would have.
 |---|---|---|
 | **Deploy model** — does a push to the default branch deploy? | Branch + local merge, then push. Generate the `check-not-main` guard anyway — see below. Do NOT generate a PR gate | Branch + PR + review gate |
 | **Database migrations?** | Generate the migration-integrity items in Self-Check and Feature Review (see the migration paragraph in Review step 5) | Omit them entirely |
-| **External feature plan** (`plan.md` or similar) with acceptance criteria? | Generate a "Reading order" section and point Review step 1 at that file | Review step 1 reads the task description instead |
+| **Where do plans with acceptance criteria live?** Ask for the CONVENTION, not one filename — `documentation/*-plan.md`, `plan.md`, or "the file the task names". A dated one-off plan hardcoded into CLAUDE.md goes stale the moment the next plan appears | Generate a "Reading order" section pointing Review step 1 at that convention | Review step 1 falls back to step 3.5's criteria; if those are absent too, it says so rather than inventing them |
 | **Startup checks needed** (Docker, tunnels, external services, seeded DB)? | Generate a "Session startup checks" section with the branches the user describes | Omit — a startup section listing nothing is worse than none |
 
 Record the answers; they are also what a future agent needs in order to understand
@@ -252,6 +262,7 @@ Copy and adapt templates to project:
 - `templates/check-claude-md-sections.py` → `documentation/check-claude-md-sections.py`
 - `templates/check-adr-append-only.py` → `documentation/check-adr-append-only.py`
 - `templates/check-gotcha-budget.py` → `documentation/check-gotcha-budget.py`
+- `templates/check-not-main.py` → `scripts/check-not-main.py` (NOT into validate.sh — that script must stay runnable on the default branch)
 - `templates/pre-commit-config.yaml` → `.pre-commit-config.yaml` (delete or enable the `check-not-main` hook per the deploy-model answer from Step 2)
 - `templates/validate.sh` → `scripts/validate.sh`
 - `templates/generate-manifest.py` → `documentation/generate-manifest.py` (optional, for 20+ blocks)
@@ -601,6 +612,34 @@ and the honest move is to say the review will need more than one session.
    - Did deciding take >10 minutes?
    - All YES → create ADR BEFORE implementation, link via `adr: [N]` in block
    - Any NO → skip ADR, just implement
+3.5. **Fix the acceptance criteria — BEFORE writing anything.**
+   - There is a plan → copy this task's criteria out of it verbatim.
+   - There is no plan → write them yourself and show them to the user for
+     confirmation, before the first line of code. Then put them where the reviewer
+     will find them: the plan, the task description, or the commit body.
+
+   **Scale them to the task.** A feature gets a list; a moved button gets one line
+   — *"the Submit button now sits under the field, nothing else moved"* is a
+   complete criterion: checkable, and possible to fail. There is no target count.
+
+   **Never write criteria after the work.** Criteria derived from what was built
+   describe the result instead of committing to it, and a review against them
+   always passes. That is not a check, it is a transcript — the same defect class
+   as claiming a test protects something because it was meant to.
+
+   **Confirmed criteria are not edited to match the outcome.** If one turns out to
+   be wrong or unreachable, say so explicitly and restate it *before* reviewing
+   against it. Quietly aligning them with the code is a retroactive ADR rewrite by
+   another name.
+
+   Why before rather than after: it catches a misread task at the cheapest possible
+   moment. "Fix the heading" understood as every page when one was meant shows up
+   in a sentence, not after ten commits. If the user is unavailable, still write
+   them down, marked as an assumption — a commitment made before the code is worth
+   far more to a reviewer than one reconstructed after it.
+
+   Skipped on the Light workflow (typo, copy, styling) — see Task routing.
+
 4. **Confirm the APIs, then write tests** — in that order:
    - **4.0 — context7 gate, MANDATORY, before the first `Edit`/`Write` of the task.**
      List every external library this task will touch — framework, ORM, validation,
@@ -769,7 +808,18 @@ Each feature = new session. Each review = new session. Clean context every time.
 
 ### Review Steps
 
-1. **Read plan** — find Feature N acceptance criteria (full list of checkboxes)
+1. **Read plan** — find Feature N acceptance criteria (full list of checkboxes).
+
+   **When there is no acceptance list, do not invent one.** A review run on a
+   trivial change — a moved button, a copy tweak — has nothing formal to check
+   against, and manufacturing criteria after the fact produces a review that passes
+   by construction. Say plainly that there is no acceptance list, then review what
+   is actually reviewable: the diff touches only what it should, the gates are
+   green, project-specific rules hold, anything visual is marked MANUAL. A short
+   honest report beats a long fabricated one.
+
+   Where criteria DO exist, also check they were not edited to match the result —
+   see step 7.
 2. **Read manifests** — `documentation/project.yaml` → relevant layer YAML → gotchas and notes of affected blocks
 3. **Read project-specific plans** — if project has implementation plans (e.g. `db-creation-plan.md`), read relevant sections
 4. **Check each acceptance point:**

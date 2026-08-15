@@ -12,10 +12,15 @@ both Test-First checklist items, and four of six Security checklist items during
 setup. Discovered three months later, by hand.
 
 Usage:
-    python documentation/check-claude-md-sections.py            # checks CLAUDE.md
-    python documentation/check-claude-md-sections.py AGENTS.md  # checks another file
+    python documentation/check-claude-md-sections.py                      # CLAUDE.md
+    python documentation/check-claude-md-sections.py CLAUDE.md AGENTS.md  # both
 
-Exit 0 when everything required is present, 1 otherwise. Safe in a pre-commit hook.
+Several files are worth passing: where AGENTS.md mirrors CLAUDE.md for non-Claude
+agents, the mirror drifts silently — nothing else compares them, and a rule
+restored in one file can stay missing in the other for months.
+
+Exit 0 when everything required is present in EVERY file checked, 1 otherwise.
+Safe in a pre-commit hook.
 """
 import sys
 from pathlib import Path
@@ -51,10 +56,10 @@ REQUIRED_CHECKLIST_ITEMS = [
     ("SOLID", ["solid"]),
     ("Naming", ["naming", "именован"]),
     ("Test-First", ["test-first", "tests exist and pass", "тесты"]),
-    ("Security — secrets", ["hardcoded secrets", "секрет"]),
-    ("Security — injection", ["parameterized quer", "sql/nosql", "concatenat", "инъекц"]),
-    ("Security — logs", ["sensitive data in logs", "no sensitive data", "в логах"]),
-    ("Security — dependencies", ["known vulnerabilities", "npm audit", "pip-audit", "уязвим"]),
+    ("Security - secrets", ["hardcoded secrets", "секрет"]),
+    ("Security - injection", ["parameterized quer", "sql/nosql", "concatenat", "инъекц"]),
+    ("Security - logs", ["sensitive data in logs", "no sensitive data", "в логах"]),
+    ("Security - dependencies", ["known vulnerabilities", "npm audit", "pip-audit", "уязвим"]),
 ]
 
 
@@ -121,10 +126,12 @@ def check(target: Path) -> int:
     print()
     print("Source of truth: the skill's templates/claude-md-sections.md.")
     print("If a section is deliberately absent, delete it from REQUIRED_* above")
-    print("and write down why — an unexplained exclusion reads as an oversight.")
+    print("and write down why - an unexplained exclusion reads as an oversight.")
     return 1
 
 
 if __name__ == "__main__":
-    name = sys.argv[1] if len(sys.argv) > 1 else "CLAUDE.md"
-    sys.exit(check(ROOT / name))
+    names = sys.argv[1:] or ["CLAUDE.md"]
+    # Check every file before exiting: reporting one missing section and hiding
+    # the rest turns one fix-and-rerun cycle into several.
+    sys.exit(max(check(ROOT / n) for n in names))

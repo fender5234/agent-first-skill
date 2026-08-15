@@ -90,7 +90,7 @@ def main(argv: list[str]) -> int:
     if not failures:
         return 0
 
-    print("ADRs are append-only — the decision was edited, not just the index:")
+    print("ADRs are append-only - the decision was edited, not just the index:")
     for path, lines in failures.items():
         print(f"\n  {path}")
         for line in lines[:8]:
@@ -98,13 +98,13 @@ def main(argv: list[str]) -> int:
         if len(lines) > 8:
             print(f"    ... and {len(lines) - 8} more changed lines")
     print()
-    print("Allowed without asking: the `Affects:` line — it is a cross-reference")
+    print("Allowed without asking: the `Affects:` line - it is a cross-reference")
     print("index, and validate.py check 4 requires it to name every block that")
     print("declares adr: [N].")
     print()
     print("To change a decision: write a NEW ADR that says 'supersedes NNN'.")
     print("If this edit is genuinely right anyway, that is a call for the user to")
-    print("make — ask, do not bypass with --no-verify.")
+    print("make - ask, do not bypass with --no-verify.")
     return 1
 
 

@@ -106,7 +106,7 @@ def main(argv: list[str]) -> int:
     print()
     print("The manifest is not a changelog. Keep the ones a future agent would")
     print("otherwise trip over; drop the rest. If all of them genuinely qualify,")
-    print("that is a call for the user to make — ask, do not bypass with --no-verify.")
+    print("that is a call for the user to make - ask, do not bypass with --no-verify.")
     return 1
 
 

@@ -21,8 +21,12 @@ repos:
       # An existing ADR's decision is append-only; its `Affects:` index is not.
       # Without this the two rules read as a contradiction and get resolved by
       # whoever hits it first — see the ADR section in CLAUDE.md.
+      # Quoted deliberately: an unquoted value containing ": " is invalid YAML and
+      # pre-commit rejects the ENTIRE config with "mapping values are not allowed
+      # here" — not just this hook. Shipped broken in 1.3.0; caught on first real
+      # install. Quote any hook name containing a colon.
       - id: adr-append-only
-        name: ADR decisions are append-only (Affects: exempt)
+        name: "ADR decisions are append-only (Affects: exempt)"
         entry: python documentation/check-adr-append-only.py
         language: system
         pass_filenames: false
@@ -46,10 +50,14 @@ repos:
       # default branch, so it never fires; and merges invoke `pre-merge-commit`,
       # not `pre-commit`.
       #
-      # Requires scripts/check-not-main.py — write it when enabling the hook.
-      # - id: check-not-main
-      #   name: no direct commits to the default branch
-      #   entry: python scripts/check-not-main.py
-      #   language: system
-      #   pass_filenames: false
-      #   always_run: true
+      # Copy templates/check-not-main.py → scripts/check-not-main.py.
+      #
+      # Do NOT add this one to scripts/validate.sh: that script has to stay
+      # runnable while you are on the default branch (checking a merge, for
+      # instance), and this guard would fail it every time.
+      - id: check-not-main
+        name: no direct commits to the default branch
+        entry: python scripts/check-not-main.py
+        language: system
+        pass_filenames: false
+        always_run: true
