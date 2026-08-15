@@ -339,7 +339,38 @@ Tell the user:
 6. Optional tools available:
    - `python documentation/generate-manifest.py <dir>` — auto-generate skeleton manifest from directory (useful for 20+ blocks)
    - `python documentation/yaml-to-mermaid.py` — generate Mermaid dependency graph on demand
-   - `.github/workflows/validate-docs.yml` — CI validation (copy from templates when working in a team)
+   - `.github/workflows/validate-docs.yml` — CI validation (copy from templates when
+     working in a team). **This is not "CI" in the usual sense** — see below
+
+### On CI: the template and a real pipeline are different things
+
+`templates/ci-validate.yml` runs exactly one command — `python documentation/validate.py`
+— on PRs touching `documentation/**` or `src/**`. Seconds, no dependency install,
+no build. Cheap enough that it never becomes the thing you switch off.
+
+A full pipeline — install, lint, typecheck, tests, migrations, build — is a
+different decision with a different cost, and the skill does not ship one. Do not
+read the optional template as a recommendation to build one.
+
+**Where a full pipeline earns its keep, and where the clean-session review already
+covers you:**
+
+| Defect class | Full CI | Clean-session review |
+|---|---|---|
+| Uncommitted file, dependency missing from the manifest, env-dependent behaviour | catches it | **misses it by default** — same working tree; closed by the clean-checkout item in review step 5 |
+| Breakage on a different OS or runtime version | catches it | misses it |
+| False claim that a test protects something | misses it — every gate stays green | catches it (step 7) |
+| Acceptance point silently unimplemented | misses it | catches it |
+| Process rule violated | misses it | catches it (step 8) |
+
+Reported from real use: a team ran both, found the full pipeline slow relative to
+what it added on top of the review, and dropped it — keeping the review as the sole
+gate. That is a defensible trade **provided** the clean-checkout item in step 5 is
+actually done, because that is the one column the review would otherwise leave
+empty.
+
+Two things not to confuse with each other: a pipeline that *gates merges* and one
+that *deploys*. Dropping the first says nothing about the second.
 
 ---
 
@@ -748,6 +779,19 @@ Each feature = new session. Each review = new session. Clean context every time.
 5. **Run automated checks:**
    - Lint, typecheck, tests, build (project-specific commands from `project.yaml → tests`)
    - `python documentation/validate.py`
+   - **Everything needed is committed — check this even though the gates are green.**
+     The reviewer works in a clean *session*, not a clean *checkout*: same working
+     tree, same installed dependencies, same local env. A file created and never
+     `git add`ed builds fine here and is simply absent from a fresh clone. No gate
+     above sees it, because every one of them reads the working tree.
+
+     Minimum: `git status --porcelain` is empty, and
+     `git ls-files --others --exclude-standard` lists nothing the build imports.
+     For a large change, do it properly — build from a throwaway `git worktree` of
+     the branch, which is a real clean checkout without waiting on CI.
+
+     This matters most where a push to the default branch deploys: there is no
+     intermediate step between a forgotten `git add` and production.
    - **Migration integrity (if the project uses DB migrations):** green tests/build do NOT prove the migrations are complete. Test suites that use schema `push`/`sync` (auto-create columns from code, bypassing the migration files) mask incomplete migration SQL — and a snapshot-vs-code drift check passes when the migration's *snapshot* is complete even though its hand-written `up()` SQL is not. So a migration can be green on every gate yet break a freshly-migrated DB (missing column/table/index at runtime). Verify separately: apply migrations from scratch to a throwaway DB (migrations-only, NOT push), diff the resulting schema against the code-derived schema, and smoke-test the app's main entrypoint (e.g. admin/home) against that DB. Prefer a repo script for this; if none exists, flag it as a gap. Highest risk on type-changing or hand-written migrations.
 6. **Verify cross-cutting rules** (grep-based):
    - Security: no hardcoded secrets, no SQL concatenation

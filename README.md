@@ -1,6 +1,6 @@
 # Agent-First Skill (Portable Archive)
 
-**Версия 1.3.0** — история изменений в [`CHANGELOG.md`](CHANGELOG.md).
+**Версия 1.3.1** — история изменений в [`CHANGELOG.md`](CHANGELOG.md).
 
 Проект записывает свою версию методологии в `documentation/project.yaml →
 meta.af_version`. Отсутствует — значит 1.0.0. Обновляется командой
