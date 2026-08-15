@@ -1,6 +1,6 @@
 # Agent-First Skill (Portable Archive)
 
-**Версия 1.2.0** — история изменений в [`CHANGELOG.md`](CHANGELOG.md).
+**Версия 1.2.1** — история изменений в [`CHANGELOG.md`](CHANGELOG.md).
 
 Проект записывает свою версию методологии в `documentation/project.yaml →
 meta.af_version`. Отсутствует — значит 1.0.0. Обновляется командой
@@ -23,6 +23,7 @@ agent-first-skill/
 └── skill/                 ← готовый скилл для Claude Code
     ├── SKILL.md
     ├── guide.md
+    ├── CHANGELOG.md       ← копия корневого; нужна маршруту апгрейда
     ├── operator-guide.md  ← руководство оператора (человека)
     └── templates/
         ├── project.yaml
@@ -105,7 +106,12 @@ cp agent-first-skill/agent-first.md /path/to/new-project/documentation/agent-fir
 4. `~/.claude/skills/agent-first-setup/` — установленный скилл (пересобрать из `skill/`)
 5. `documentation/agent-first-guide.md` — копия в текущем проекте (если есть)
 6. `agent-first-skill/CHANGELOG.md` — запись о том, что и зачем изменилось
-7. версия в шапке этого README
+7. `agent-first-skill/skill/CHANGELOG.md` — копия предыдущего. Она едет в
+   установленный скилл и нужна маршруту апгрейда: он вычисляет дельту, читая
+   `CHANGELOG.md` рядом с `SKILL.md`. Без копии маршрут останавливается на первом
+   шаге — так и было в 1.2.0
+8. `meta.af_version` в `skill/templates/project.yaml` и в листинге Приложения А.1
+9. версия в шапке этого README
 
 Правило, которое легко нарушить: правка только в `skill/` расходится с `AGENTS.md`,
 и проекты на Cursor/Cline/Aider тихо остаются на старых правилах — валидатор этого

@@ -9,6 +9,8 @@ Methodology for organizing projects for AI-agent-driven development and maintena
 
 ## Full reference
 Read `guide.md` for complete methodology, principles, and rationale.
+Read `CHANGELOG.md` for what changed between methodology versions — the Upgrade
+Workflow diffs a project's `meta.af_version` against it.
 
 ## Templates (ready to copy)
 - `templates/project.yaml` — super-index for the project
@@ -225,7 +227,7 @@ why a section is present or absent.
 ### Step 4: Create structure
 Copy and adapt templates to project:
 - `templates/project.yaml` → `documentation/project.yaml` — keep `meta.af_version`
-  and set it to the version in the skill's `CHANGELOG.md`. Dropping this field is
+  and set it to the newest version in `CHANGELOG.md` next to this file. Dropping this field is
   not cosmetic: it is what a later Upgrade Workflow diffs against, and without it
   an upgrade cannot tell what to apply
 - `templates/layer.yaml` → `documentation/<layer>.yaml` (filled with approved blocks)
@@ -422,8 +424,10 @@ happening at all.
 1. **Establish the delta.**
    - Read `documentation/project.yaml` → `meta.af_version`. **Absent means 1.0.0** —
      the field predates nothing else, so an old project simply lacks it.
-   - Read the skill's `CHANGELOG.md` (in the skill archive, alongside `README.md`).
-     Every entry newer than the project's version is in scope.
+   - Read `CHANGELOG.md` **next to this file**, in the skill's own directory. It
+     ships with the skill precisely so an upgrade works on any machine without
+     knowing where the source archive lives. Every entry newer than the project's
+     version is in scope.
    - If the project's version equals the skill's — say so and stop. Do not
      "refresh" files that are already current.
    - **If no CHANGELOG is reachable, stop and say so.** Guessing the delta by
