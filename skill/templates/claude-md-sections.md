@@ -53,7 +53,8 @@ or when a part has no acceptance criteria of its own.
 
 ### Self-Check checklist (step 8)
 - [ ] context7: **verify step 4.0 happened BEFORE the first Edit/Write — tests included** — this box confirms the gate was passed, it does not replace it. Ticking it afterwards, having written the code from memory, is the failure this wording exists to prevent
-- [ ] sequential-thinking: used for all non-trivial decisions during implementation?
+- [ ] sequential-thinking: **name the forks it was used on.** Reasoning done silently is unverifiable, which is the whole point of the rule. "Used it" with nothing to point at means it was not used
+- [ ] **Claims about your own work are verified, not intended.** For every statement that something is covered, protected, prevented or guaranteed by a test — did you watch that test go red with the protection removed? A test written as a tripwire that never fired is documentation of the hazard, not a guard against it. Unverified claims of this kind are the one defect class no machine gate catches
 - [ ] KISS: no functions > 40 lines, no nesting > 3 levels?
 - [ ] DRY: grepped project for similar logic, no unnecessary duplication?
 - [ ] SOLID: each new module/class has single responsibility?
@@ -130,14 +131,21 @@ convention: `feat/f11a-taxonomies`, `fix/reviews-depth-bug`, `docs/seo-plan`.
 Branching costs nothing on a solo repo and keeps an escape hatch when a task turns
 out wrong. It is independent of whether the project uses pull requests.
 
+The `check-not-main` pre-commit guard enforces this. **It is compatible with a
+deploy-on-push setup** — the obvious guess is wrong. It is a pre-commit hook: it
+refuses `git commit` while HEAD is on the default branch. It never runs on
+`git push`, so it cannot block a deploy; with `branch → merge --ff-only → push` no
+commit is created on the default branch, so it does not fire at all; and merges
+invoke `pre-merge-commit`, not `pre-commit`.
+
 > **Fill in during setup — how does this project merge?**
 >
-> - **Push to the default branch deploys** → branch, then merge locally. Do NOT add
->   a `check-not-main` guard or a PR gate; they would break the deploy path.
-> - **PR-based** → branch, open a PR, merge only after a green CI run AND a clean-session
->   review. Add the `check-not-main` pre-commit guard.
+> - **Push to the default branch deploys** → branch, merge locally, push. No PR gate.
+> - **PR-based** → branch, open a PR, merge only after a green CI run AND a
+>   clean-session review.
 >
-> Delete the branch that does not apply and state which model this project uses.
+> Both models get the `check-not-main` guard. Delete the line that does not apply
+> and state which model this project uses.
 
 ## Agent autonomy rules
 
@@ -153,14 +161,14 @@ out wrong. It is independent of whether the project uses pull requests.
 - Changing DB schema (migrations)
 - Touching .env or config
 - Deploying to production
-- Modifying existing ADRs (they are append-only)
+- Modifying an existing ADR's Context / Decision / Consequences (append-only)
 - Merging without a clean-session review pass
 
 ### Never do:
 - Commit directly to the default branch — always work in a task branch
 - push --force
 - Commit secrets / .env
-- Modify ADRs retroactively (create new one with "supersedes N")
+- Rewrite an ADR's Context / Decision / Consequences retroactively — supersede with a new ADR instead. **`Affects:` is exempt**: it is a cross-reference index, not the decision, and `validate.py` check 4 requires it to name every block that declares `adr: [N]`. Adding a consumer to it needs no permission
 - Skip pre-commit hooks (`--no-verify`)
 
 ## Cross-cutting quality rules

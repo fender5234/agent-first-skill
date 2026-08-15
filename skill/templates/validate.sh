@@ -7,6 +7,12 @@ python documentation/validate.py
 echo "==> Checking AF sections in agent instructions..."
 python documentation/check-claude-md-sections.py
 
+echo "==> Checking ADR append-only rule..."
+python documentation/check-adr-append-only.py
+
+echo "==> Checking gotcha budget..."
+python documentation/check-gotcha-budget.py
+
 # Add more checks here as project grows:
 # echo "==> Running linters..."
 # echo "==> Running type checks..."

@@ -17,6 +17,8 @@ Workflow diffs a project's `meta.af_version` against it.
 - `templates/layer.yaml` — blocks manifest template
 - `templates/validate.py` — integrity checker (paths, ADR cross-refs, orphan detection, duplicate keys)
 - `templates/check-claude-md-sections.py` — asserts the AF sections survived setup
+- `templates/check-adr-append-only.py` — an ADR's decision is immutable, its `Affects:` index is not
+- `templates/check-gotcha-budget.py` — caps gotchas added to pre-existing blocks
 - `templates/pre-commit-config.yaml` — pre-commit hook config
 - `templates/validate.sh` — unified validation script
 - `templates/adr-template.md` — ADR skeleton
@@ -211,13 +213,28 @@ skim it, which costs more than the missing rule would have.
 
 | Question | If yes | If no |
 |---|---|---|
-| **Deploy model** — does a push to the default branch deploy? | Branch + local merge. Do NOT generate a `check-not-main` guard or a PR gate — they would break the deploy path | Branch + PR + review gate; generate the `check-not-main` pre-commit guard |
+| **Deploy model** — does a push to the default branch deploy? | Branch + local merge, then push. Generate the `check-not-main` guard anyway — see below. Do NOT generate a PR gate | Branch + PR + review gate |
 | **Database migrations?** | Generate the migration-integrity items in Self-Check and Feature Review (see the migration paragraph in Review step 5) | Omit them entirely |
 | **External feature plan** (`plan.md` or similar) with acceptance criteria? | Generate a "Reading order" section and point Review step 1 at that file | Review step 1 reads the task description instead |
 | **Startup checks needed** (Docker, tunnels, external services, seeded DB)? | Generate a "Session startup checks" section with the branches the user describes | Omit — a startup section listing nothing is worse than none |
 
 Record the answers; they are also what a future agent needs in order to understand
 why a section is present or absent.
+
+**On `check-not-main` and deploy-from-main — a correction worth stating explicitly,
+because the obvious guess is wrong.** The guard is a **pre-commit** hook: it refuses
+`git commit` while HEAD is on the default branch. It is compatible with a
+deploy-on-push setup, and the reasoning is mechanical:
+
+- it never runs on `git push`, so it cannot block a deploy;
+- with `branch → merge --ff-only → push` no commit is created on the default branch
+  at all, so the hook does not fire once;
+- and merges do not trigger it either — git invokes `pre-merge-commit` for those,
+  not `pre-commit`, and the framework installs only `pre-commit` by default.
+
+So the deploy-model answer decides the **PR gate**, not the branch guard. Generate
+the guard for both models. What it buys, in either: the moment a task's first
+`git commit` lands, being on the wrong branch stops being a judgement call.
 
 ### Step 3: Inventory (existing projects only)
 - Scan the chosen layer's folder structure
@@ -233,6 +250,8 @@ Copy and adapt templates to project:
 - `templates/layer.yaml` → `documentation/<layer>.yaml` (filled with approved blocks)
 - `templates/validate.py` → `documentation/validate.py` (adapt paths to project)
 - `templates/check-claude-md-sections.py` → `documentation/check-claude-md-sections.py`
+- `templates/check-adr-append-only.py` → `documentation/check-adr-append-only.py`
+- `templates/check-gotcha-budget.py` → `documentation/check-gotcha-budget.py`
 - `templates/pre-commit-config.yaml` → `.pre-commit-config.yaml` (delete or enable the `check-not-main` hook per the deploy-model answer from Step 2)
 - `templates/validate.sh` → `scripts/validate.sh`
 - `templates/generate-manifest.py` → `documentation/generate-manifest.py` (optional, for 20+ blocks)
@@ -582,7 +601,8 @@ and the honest move is to say the review will need more than one session.
 7. **Add gotcha** — if stumbled on non-obvious issue (budget: 1-2 per session)
 8. **Self-Check** — before committing, verify code against cross-cutting rules:
    - [ ] context7: **verify step 4.0 actually happened before the first `Edit`/`Write` — tests included** — this box is verification that the gate was passed, NOT a substitute for it. Ticking it post-hoc after writing code from memory is the failure mode this wording exists to prevent
-   - [ ] sequential-thinking: used for all non-trivial decisions during implementation?
+   - [ ] sequential-thinking: **name the forks it was used on.** Reasoning done silently is unverifiable, and verifiability is the entire value of the rule. "Used it" with nothing to point at means it was not used
+   - [ ] **Claims about your own work are verified, not intended.** For every statement that something is covered, protected, prevented or guaranteed by a test — did you watch that test go red with the protection removed? A tripwire that never fired documents the hazard; it does not guard against it. This is the one defect class no machine gate catches, which is why it is also a review item
    - [ ] KISS: no functions > 40 lines, no nesting > 3 levels?
    - [ ] DRY: grepped project for similar logic, no unnecessary duplication?
    - [ ] SOLID: each new module/class has single responsibility?
@@ -602,6 +622,27 @@ and the honest move is to say the review will need more than one session.
    - [ ] Test-First: edge cases covered (null, empty, errors, invalid input, boundaries)?
    If any check fails — fix before committing.
 9. **Commit** — pre-commit hook validates references
+
+### ADRs are append-only — except the `Affects:` index
+
+"Append-only" applies to the **decision**: Context, Decision, Consequences,
+alternatives. Those record what was decided and why, at a point in time. Editing
+them later rewrites history; supersede with a new ADR instead.
+
+`Affects:` is **not part of the decision**. It is a cross-reference index, and
+`validate.py` check 4 requires it to list every block that declares `adr: [N]`. So
+the moment a NEW block starts depending on an existing decision, that ADR's
+`Affects:` line has to gain a name — and this is explicitly allowed, and needs no
+permission. Adding a consumer to an index is not rewriting a decision.
+
+**Without this carve-out the two rules contradict each other**, and an agent that
+hits the contradiction resolves it by unblocking itself — which teaches it that
+rules are negotiable when inconvenient. Observed exactly once, in a real session:
+`validate.py` blocked the commit, the agent found a precedent for the same edit in
+the ADR history and proceeded without asking.
+
+Enforced by `check-adr-append-only.py`: modifications to an existing ADR are
+rejected unless every changed line is the `Affects:` line.
 
 ### ADR Decision Rule (3 criteria)
 
@@ -713,10 +754,34 @@ Each feature = new session. Each review = new session. Clean context every time.
    - Naming: consistent with project patterns
    - Architecture: feature-based structure respected
    - Project-specific rules (from CLAUDE.md)
-7. **Output report:** table of acceptance points with statuses (PASS / FAIL / MANUAL)
-8. **Verdict:**
-   - All PASS → "Feature N ready for push/merge"
-   - Any FAIL → list specific problems with file paths and line numbers
+
+7. **Audit the claims the author made about their own work.** This is the reviewer's
+   highest-value pass, because it is the only defect class no gate catches: lint,
+   tests, build and validate.py all stay green while a comment, a gotcha or an ADR
+   says something untrue about the code beside it.
+
+   For every claim that something is *covered / protected / prevented / guaranteed*
+   by a test — find the test and read what it actually asserts. A test written as a
+   tripwire but never wired to fail documents the hazard rather than guarding it.
+   Where the claim is load-bearing, break the thing it protects and confirm the
+   suite goes red.
+
+   Observed once, in a real session: three places — a source comment, a manifest
+   gotcha and an ADR's Consequences — stated that the composition order of two
+   functions was protected by a test. Reordering the calls left all four gates
+   green and reintroduced the bug on nine indexed pages.
+
+   Also check: does a rule the workflow required actually have an artifact? "wrote
+   tests first" with the tests committed after the implementation, "used
+   sequential-thinking" with no named forks.
+
+8. **Verify the process rules that have no machine gate.** Branch used, gotcha
+   budget respected, no existing ADR's decision rewritten. Two of these now have
+   pre-commit hooks; name in the report which held by hook and which by inspection.
+9. **Output report:** table of acceptance points with statuses (PASS / FAIL / MANUAL)
+10. **Verdict:**
+    - All PASS → "Feature N ready for push/merge"
+    - Any FAIL → list specific problems with file paths and line numbers
 
 ### Fix policy
 

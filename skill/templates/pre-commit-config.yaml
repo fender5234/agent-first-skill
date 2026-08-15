@@ -18,10 +18,35 @@ repos:
         pass_filenames: false
         files: ^(CLAUDE\.md|AGENTS\.md)$
 
-      # PR-based projects only. Blocks commits made directly on the default
-      # branch. DELETE this hook if a push to the default branch is how this
-      # project deploys — there it breaks the deploy path instead of guarding it.
-      # Requires scripts/check-not-main.py; write it when enabling the hook.
+      # An existing ADR's decision is append-only; its `Affects:` index is not.
+      # Without this the two rules read as a contradiction and get resolved by
+      # whoever hits it first — see the ADR section in CLAUDE.md.
+      - id: adr-append-only
+        name: ADR decisions are append-only (Affects: exempt)
+        entry: python documentation/check-adr-append-only.py
+        language: system
+        pass_filenames: false
+        files: ^documentation/adr/.*\.md$
+
+      # "1-2 gotchas per session" was prose, and prose lost to a busy session on
+      # its first outing. Gotchas on blocks added in the same commit are exempt.
+      - id: gotcha-budget
+        name: gotcha budget for existing blocks
+        entry: python documentation/check-gotcha-budget.py
+        language: system
+        pass_filenames: false
+        files: ^documentation/.*\.yaml$
+
+      # Blocks `git commit` while HEAD is on the default branch.
+      #
+      # KEEP THIS even when a push to the default branch is how the project
+      # deploys — the obvious guess that it breaks the deploy path is wrong. It
+      # is a pre-commit hook: it never runs on `git push`, so it cannot block a
+      # deploy; with branch → merge --ff-only → push no commit is created on the
+      # default branch, so it never fires; and merges invoke `pre-merge-commit`,
+      # not `pre-commit`.
+      #
+      # Requires scripts/check-not-main.py — write it when enabling the hook.
       # - id: check-not-main
       #   name: no direct commits to the default branch
       #   entry: python scripts/check-not-main.py
