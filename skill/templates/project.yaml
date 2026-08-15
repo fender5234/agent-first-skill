@@ -3,6 +3,19 @@ meta:
   name: my-project
   created: 2026-04-05
 
+  # Version of the agent-first methodology these artifacts were generated from.
+  # Set by setup, bumped by the Upgrade Workflow — do not edit by hand.
+  #
+  # This is what makes upgrades possible: the skill evolves on the machine, while
+  # documentation/validate.py, scripts/validate.sh and the CLAUDE.md sections are
+  # COPIES that stop tracking it the moment they are written. Without a version
+  # here there is nothing to diff the skill's CLAUDE.md against, and an upgrade
+  # degenerates into re-running setup over a live project — which overwrites the
+  # project's own checks.
+  #
+  # Absent = 1.0.0 (artifacts predate this field).
+  af_version: 1.2.0
+
 layers:
   # Add as layer manifests are created
   # frontend: documentation/frontend.yaml

@@ -301,6 +301,8 @@ Every 2-4 weeks (or after major refactoring), user may run drift audit. When use
 ```
 documentation/
 ├── project.yaml                    ← super-index, entry point for agents
+│                                     (meta.af_version = methodology version;
+│                                      absent means 1.0.0 — see below)
 ├── <layer>.yaml                    ← blocks manifest per layer
 ├── validate.py                     ← integrity checker (incl. duplicate-key guard)
 ├── check-claude-md-sections.py     ← asserts AF sections survived edits
@@ -314,6 +316,27 @@ scripts/
 .pre-commit-config.yaml       ← hook config
 CLAUDE.md / AGENTS.md         ← agent instructions (this file)
 ```
+
+## Methodology version and upgrades
+
+`documentation/project.yaml → meta.af_version` records which version of the
+agent-first methodology these artifacts came from. **Absent means 1.0.0** — the
+field is newer than the artifacts, not missing from them.
+
+The files above are **copies**, taken once and independent ever since. A healthy
+project grows its own checks in them, and that fork is worth more than the
+template it came from. So when a newer methodology version arrives:
+
+- **Merge into these files, never overwrite them.** Add a new check with the next
+  free number; do not renumber existing ones — their ids appear in commit messages
+  and review checklists
+- **Repair `CLAUDE.md` / `AGENTS.md` section by item, not by heading.** A checklist
+  that is present but has lost half its items still matches by heading; appending
+  only what is missing at heading level leaves the gap in place
+- **Stamp `af_version` last**, once the checks pass. A version stamp on a
+  half-applied upgrade makes the next upgrade skip work it never did
+- Watch for wording that was true once and expired since — a "no test runner yet"
+  caveat written before tests existed now misleads
 
 ## Quick reference: what to update when
 

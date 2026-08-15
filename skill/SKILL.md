@@ -1,6 +1,6 @@
 ---
 name: agent-first-setup
-description: Set up or migrate a project to agent-first architecture with YAML manifests, ADRs, validation, and pre-commit hooks. Also runs drift-audit to verify YAML manifests match reality, guides feature-implementation workflow (when to create ADRs, which YAML fields to update), and provides independent feature review in clean sessions. Use when user mentions "AF" (shorthand for agent-first), or asks to "setup agent-first", "make project agent-friendly", "add YAML manifests", "organize project for AI agents", "внедри agent-first", "настрой проект под агентов", "agent-first подход", "используй AF", "примени AF", "настрой AF", "проведи дрейф-аудит", "drift audit", "дрейф аудит", "проверь соответствие yaml коду", "сверь манифесты с кодом", "добавь фичу по AF", "новая фича AF", "implement feature AF", "AF workflow", "нужен ли ADR", "do I need ADR", "проверь Feature", "проверь фичу", "review Feature", "проверь выполненную задачу"
+description: Set up or migrate a project to agent-first architecture with YAML manifests, ADRs, validation, and pre-commit hooks. Also runs drift-audit to verify YAML manifests match reality, upgrades a project already on AF to a newer methodology version (merging, never overwriting its own checks), guides feature-implementation workflow (when to create ADRs, which YAML fields to update), and provides independent feature review in clean sessions. Use when user mentions "AF" (shorthand for agent-first), or asks to "setup agent-first", "make project agent-friendly", "add YAML manifests", "organize project for AI agents", "внедри agent-first", "настрой проект под агентов", "agent-first подход", "используй AF", "примени AF", "настрой AF", "проведи дрейф-аудит", "drift audit", "дрейф аудит", "проверь соответствие yaml коду", "сверь манифесты с кодом", "обнови проект под AF", "обнови проект под новый скилл", "апгрейд AF", "upgrade AF", "обнови AF до текущей версии", "перенеси изменения скилла в проект", "добавь фичу по AF", "новая фича AF", "implement feature AF", "AF workflow", "нужен ли ADR", "do I need ADR", "проверь Feature", "проверь фичу", "review Feature", "проверь выполненную задачу"
 ---
 
 # Agent-First Project Setup
@@ -175,13 +175,21 @@ Before starting the setup workflow, check if the user is invoking a sub-command:
 - **"Проведи дрейф-аудит" / "drift audit" / "дрейф аудит" / "сверь yaml с кодом"** → jump to "Drift Audit Workflow" section below, do NOT run setup steps
 - **"Добавь фичу по AF" / "новая фича AF" / "implement feature AF" / "нужен ли ADR"** → jump to "Feature Workflow" section below, do NOT run setup steps
 - **"Проверь Feature N" / "проверь фичу" / "review Feature" / "проверь выполненную задачу"** → jump to "Feature Review Workflow" section below, do NOT run setup steps
+- **"обнови проект под AF" / "апгрейд AF" / "upgrade AF" / "обнови AF до текущей версии"** → jump to "Upgrade Workflow" section below. **This is NOT setup.** The project already has AF artifacts and some of them are worth more than what the templates carry — running setup over them destroys project-specific checks
 - **Setup / migrate / "настрой AF"** → continue with workflow below
+
+**Routing a request that mentions an existing AF project and a newer skill:** it is
+an upgrade, not a setup. Setup's rule for a conflict is "overwrite"; upgrade's is
+"merge". If a request is ambiguous, ask which one before touching a file.
 
 ## Workflow
 
 ### Step 1: Detect project state
 - New project → follow "Чеклист старта на новом проекте" in guide.md
-- Existing project → follow "Приложение Б" (migration) in guide.md
+- Existing project, no AF artifacts → follow "Приложение Б" (migration) in guide.md
+- **Existing project that ALREADY has `documentation/project.yaml`** → this is not a
+  setup. Stop and switch to the **Upgrade Workflow**. Re-running setup over live AF
+  artifacts overwrites the project's own checks
 
 ### Step 2: Gather context from user
 REQUIRED before proceeding:
@@ -216,7 +224,10 @@ why a section is present or absent.
 
 ### Step 4: Create structure
 Copy and adapt templates to project:
-- `templates/project.yaml` → `documentation/project.yaml`
+- `templates/project.yaml` → `documentation/project.yaml` — keep `meta.af_version`
+  and set it to the version in the skill's `CHANGELOG.md`. Dropping this field is
+  not cosmetic: it is what a later Upgrade Workflow diffs against, and without it
+  an upgrade cannot tell what to apply
 - `templates/layer.yaml` → `documentation/<layer>.yaml` (filled with approved blocks)
 - `templates/validate.py` → `documentation/validate.py` (adapt paths to project)
 - `templates/check-claude-md-sections.py` → `documentation/check-claude-md-sections.py`
@@ -379,6 +390,111 @@ When user says "Проведи дрейф-аудит" / "drift audit" / similar 
 - Missing optional fields (empty `api_calls`, `gotchas`, etc. are fine)
 - Small helper files not worth mentioning in notes
 - Style/formatting preferences
+
+---
+
+## Upgrade Workflow
+
+When user says "обнови проект под AF" / "upgrade AF" / similar — bring a project
+that already has AF artifacts up to the methodology version this skill carries.
+
+**Why this is a separate workflow and not setup.** The skill lives on the machine
+(`~/.claude/skills/`); what setup put in the project — `documentation/validate.py`,
+`scripts/validate.sh`, the CLAUDE.md sections — are COPIES that stopped tracking it
+the moment they were written. They are forks, and a healthy project's fork is worth
+MORE than the template: it has grown checks the template never had. Setup's rule
+for a conflict is "overwrite". Here it is **merge**. Applying setup to a live
+project behaves as a destructive operation, simply because nothing ever taught it
+otherwise.
+
+### The prime directive
+
+> **Never overwrite a file the project has diverged on. Merge into it.**
+
+Before writing to any file that already exists, diff it against the template. Every
+difference is either (a) something this upgrade adds, or (b) something the project
+added for itself. (b) is not noise to be cleaned up — it is the reason the project
+works. Losing it is the worst outcome of this workflow, worse than the upgrade not
+happening at all.
+
+### Upgrade Steps
+
+1. **Establish the delta.**
+   - Read `documentation/project.yaml` → `meta.af_version`. **Absent means 1.0.0** —
+     the field predates nothing else, so an old project simply lacks it.
+   - Read the skill's `CHANGELOG.md` (in the skill archive, alongside `README.md`).
+     Every entry newer than the project's version is in scope.
+   - If the project's version equals the skill's — say so and stop. Do not
+     "refresh" files that are already current.
+   - **If no CHANGELOG is reachable, stop and say so.** Guessing the delta by
+     diffing files is how project-specific checks get deleted as "drift".
+
+2. **Ask the setup questions the project never answered.** Later versions add
+   questions to Step 2 that did not exist when this project was set up. Ask them
+   now, and treat the answers as binding for what gets generated. The
+   deploy-model question is the dangerous one: generating a `check-not-main` guard
+   into a project where a push to the default branch IS the deploy breaks the
+   deploy path.
+
+3. **Inventory what the project has, per file.** For each artifact the delta
+   touches, record: does it exist, has it diverged from the template, and what is
+   project-specific in it. Present this to the user before writing anything.
+
+4. **Merge, file by file.**
+
+   | Artifact | How |
+   |---|---|
+   | `documentation/validate.py` | Add new checks with the NEXT free number. Never renumber, never replace the file. A project check occupying number 7 stays at 7 |
+   | `scripts/validate.sh` | Append new invocations. Existing lines are project gates — leave them |
+   | `.pre-commit-config.yaml` | Add new hooks. Honour the deploy-model answer for conditional ones |
+   | New standalone scripts | Copy as-is; nothing to conflict with |
+   | `CLAUDE.md` / `AGENTS.md` | See step 5 — this is the one that needs care |
+   | `documentation/project.yaml` | Set `meta.af_version` last, in step 7 |
+
+5. **Repair CLAUDE.md, do not just append to it.** Setup appends sections that are
+   missing and skips those whose heading already exists. That rule is wrong here:
+   the common failure is a section that IS present but has lost content — a
+   Self-Check checklist missing half its items still matches by heading, so setup
+   would skip it and the gap would survive the upgrade.
+   - Compare the project's version of each section against the template **item by
+     item**, not by heading
+   - Restore what is missing; keep every project-specific line
+   - Where the project deliberately worded something differently, keep the
+     project's wording and only add what is new
+   - Watch for wording that was correct once and has since expired — a
+     "tests are aspirational, no runner yet" caveat written before a test runner
+     existed is now false and actively misleads
+
+6. **Run both checks.** `python documentation/validate.py` and
+   `python documentation/check-claude-md-sections.py` must both exit 0. A red
+   sections check after an upgrade means step 5 was done by heading, not by item.
+
+7. **Stamp the version.** Set `meta.af_version` in `documentation/project.yaml` to
+   the skill's current version — last, only once 6 is green. A version stamp on a
+   half-applied upgrade is worse than none: the next upgrade will skip the delta
+   it claims to have applied.
+
+8. **Report** — what was merged, what was skipped and why, what the user must
+   decide. Name every project-specific thing you preserved, so the user can verify
+   nothing was lost.
+
+### Critical rules for upgrade
+
+- **Merge, never overwrite** — see the prime directive
+- **Absent `af_version` = 1.0.0**, not "unknown, re-run setup"
+- **Do not renumber existing checks** — ids appear in commit messages, review
+  checklists and CLAUDE.md prose; renumbering silently breaks all of them
+- **Do not delete a project's checks as "drift"** — drift audit is a separate
+  workflow with its own report-only rule, and it is not part of an upgrade
+- **Stamp the version last**, after the gates are green
+- **One project per session.** Two projects in one context is how a check from one
+  ends up in the other
+
+### Retrofitting `af_version` onto an older project
+
+Projects set up before this field simply lack it. Do not treat that as corruption:
+read it as 1.0.0, run the upgrade, and the stamp appears in step 7. There is no
+separate migration for the field itself.
 
 ---
 
