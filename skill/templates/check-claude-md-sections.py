@@ -36,7 +36,7 @@ REQUIRED_SECTIONS = [
     ("Agent entry points", ["agent entry points", "точки входа"]),
     ("Task routing", ["task routing", "маршрутизация задач"]),
     ("Self-Check checklist", ["self-check"]),
-    ("Feature review (clean session)", ["feature review", "ревью фичи", "проверь feature"]),
+    ("Feature review (clean session)", ["feature review", "ревью фичи", "проверь feature", "review is a gate"]),
     ("Agent autonomy rules", ["agent autonomy", "автономи"]),
     ("Self-maintaining documentation", ["self-maintaining", "самодополн", "самоподдерж"]),
 ]
@@ -50,7 +50,9 @@ REQUIRED_SECTIONS = [
 # script exists to catch.
 REQUIRED_CHECKLIST_ITEMS = [
     ("context7 gate", ["context7"]),
-    ("sequential-thinking", ["sequential-thinking"]),
+    # Was "sequential-thinking" before 1.6.0. "fork" matches both the new item and
+    # the old one ("name the forks it was used on"), so un-upgraded projects stay green.
+    ("Forks recorded", ["fork", "развилк"]),
     ("KISS", ["kiss"]),
     ("DRY", ["dry"]),
     ("SOLID", ["solid"]),

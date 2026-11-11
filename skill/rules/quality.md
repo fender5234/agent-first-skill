@@ -4,18 +4,21 @@
 > `CHANGELOG.md` are relative to the skill root — the folder holding `SKILL.md`.
 
 
-These rules are mandatory at every stage — orientation, ADR decisions, implementation, drift audit, review.
+These rules apply whenever code is written, changed or reviewed — implementation, ADR decisions, review.
 
-### 1. Always use context7 for documentation
-Before reading, writing, or reviewing any code — check current documentation via context7.
-This applies to: frameworks, libraries, standard library of the language, build tools, test tools, CLI tools.
-**Never rely on training data.** API changes between versions, best practices evolve, deprecated patterns persist in training data.
+### 1. Confirm external APIs before using them (context7)
+Before writing or reviewing code that calls an external API — framework, library, build/test tool, CLI — confirm the API from a source, not from memory:
+- **a working use of the same API in this repo** at the version the project pins, or
+- **current docs via context7** for that pinned major version.
 
-### 2. Always use sequential-thinking for structured reasoning
-Before and during implementation — use sequential-thinking MCP server for any non-trivial decision.
-This applies to: ADR decisions, choosing implementation approach, evaluating trade-offs, debugging complex issues, refactoring strategy, and mid-implementation design choices.
-**Never "shoot from the hip."** Structure your reasoning: problem → options → trade-offs → decision.
-If during coding you hit a fork ("should I do X or Y?") — stop and use sequential-thinking before proceeding.
+context7 is required when: the API is not yet used in the repo; the task adds or upgrades a dependency; the library or its major version is newer than your training data; or you are not sure. A stable API already used the same way in the repo (`pytest.raises`, `useState`, the language's stdlib) needs no lookup.
+**Memory alone is never the source.** Deprecated patterns persist in training data.
+
+### 2. Decide real forks explicitly and record them
+Think before you commit to an approach — your own reasoning is enough; the sequential-thinking MCP is optional, not required.
+A **real fork** is 2+ reasonable options with different consequences: data model, library choice, error-handling strategy, public API shape. Trivial choices — a string literal vs a constant, a fixture vs unique ids — are not forks.
+Every real fork leaves a one-line record: in the ADR if it meets the ADR rule, otherwise in the commit body — `Fork: X vs Y → X, because …`. A decision with no record is unverifiable, and verifiability is the point of this rule.
+If you hit a real fork mid-implementation — stop, decide, record, then continue.
 
 ### 3. Always apply KISS / DRY / SOLID when writing code
 Apply these principles during implementation, not as a separate review step:

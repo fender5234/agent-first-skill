@@ -36,27 +36,29 @@ or when a part has no acceptance criteria of its own.
 ### New feature / new module → Full 9-step workflow
 0. Size check — see Step 0 above; create the branch BEFORE the first commit
 1. Orient — read project.yaml, find affected blocks
-2. Read block context — output gotchas to user (mandatory)
+2. Read block context — read all gotchas; name the ones relevant to this change (or "none relevant")
 3. ADR decision — apply 3-criteria rule
-4. **4.0: context7 gate BEFORE the first edit or write.** Confirm against current
-   docs every library API this task will touch, **including the test runner,
-   assertion and mocking libraries**; training data is not an acceptable source;
-   if an API cannot be confirmed, write nothing — confirm it or escalate.
+4. **4.0: API gate BEFORE the first edit or write.** Every external API this task
+   will touch, **including the test runner, assertion and mocking libraries**, needs
+   a named source: a working use in this repo, or current docs via context7
+   (required when the API is new to the repo, a dependency is added/upgraded, or you
+   are unsure); training data is not an acceptable source; if an API cannot be
+   confirmed, write nothing — confirm it or escalate.
    **4.1:** write tests for key scenarios per module, BEFORE implementation.
    The gate fires BEFORE the tests: a test file is code — it calls the runner's
    API, the assertion API, the mocking API, and the API of the module under test.
    Tests written from memory fail for the wrong reason and pin the implementation
    to an imagined API. "Write tests, then check docs" contradicts itself, because
    writing a test IS the first write.
-5. Implement — code with sequential-thinking, KISS/DRY/SOLID/Feature-Based
+5. Implement — KISS/DRY/SOLID/Feature-Based; record real forks (ADR or commit body)
 6. Run tests — green → continue, red → fix
 7. Update YAML — manifests of affected blocks
 8. Self-Check — verify code against all cross-cutting rules (see checklist below)
-9. Commit — pre-commit validates. Then review in a clean session before merge
+9. Commit — pre-commit validates. Then review in a clean context (fresh subagent or new session) before merge
 
 ### Self-Check checklist (step 8)
-- [ ] context7: **verify step 4.0 happened BEFORE the first edit — tests included** — this box confirms the gate was passed, it does not replace it
-- [ ] sequential-thinking: used for all non-trivial decisions during implementation?
+- [ ] API gate (context7 / repo usage): **every external API this task calls had a named source BEFORE the first edit — tests included** — this box confirms the gate was passed, it does not replace it
+- [ ] Forks: **every real fork is recorded** — in the ADR or the commit body (`Fork: X vs Y → X, because …`). "No real forks" is a valid answer; say so
 - [ ] KISS: no functions > 40 lines, no nesting > 3 levels?
 - [ ] DRY: grepped project for similar logic, no unnecessary duplication?
 - [ ] SOLID: each new module/class has single responsibility?
@@ -144,7 +146,7 @@ When implementing a new feature:
 
 When editing a block:
 1. Read its `gotchas` and `notes` in YAML FIRST
-2. **LIST all gotchas to the user** before starting implementation — never skip silently
+2. Read all of them; in the task brief, name the ones this change can trip over (or "none relevant") — one line, not a dump
 3. If during work you discover a non-trivial detail future agents should know — ADD it to gotchas
 4. Format: `"Don't X — reason Y"` (one short sentence)
 5. **Budget: add at most 1-2 gotchas per session**. Don't spam the manifest.
@@ -188,15 +190,15 @@ Format: **`<topic>` — CLOSED `<date>`.** `<conclusion>` `<where the evidence l
 
 ## Cross-cutting quality rules (apply to ALL stages)
 
-### 1. Always use context7 for documentation
-Before reading, writing, or reviewing any code — check current documentation via context7.
-Applies to: frameworks, libraries, standard library of the language, build tools, test tools, CLI tools.
-**Never rely on training data.** API changes between versions, best practices evolve, deprecated patterns persist in training data.
+### 1. Confirm external APIs before using them (context7)
+Every external API you call — framework, library, build/test tool — needs a source, not memory: a working use of the same API in this repo at the pinned version, or current docs via context7.
+context7 is required when the API is new to the repo, a dependency is added or upgraded, the library is newer than your training data, or you are unsure.
+Never rely on training data alone — APIs change between versions.
 
-### 2. Always use sequential-thinking for structured reasoning
-Before and during implementation — use sequential-thinking for any non-trivial decision.
-Applies to: ADR decisions, choosing implementation approach, evaluating trade-offs, debugging complex issues, refactoring strategy, mid-implementation design choices.
-Structure: problem → options → trade-offs → decision. Never "shoot from the hip." If you hit a fork during coding — stop and think first.
+### 2. Decide real forks explicitly and record them
+Your own reasoning is enough; the sequential-thinking MCP is optional, not required.
+A real fork = 2+ reasonable options with different consequences (data model, library, error strategy, public API shape). Trivial choices are not forks.
+Record each real fork in one line — in the ADR if it meets the ADR rule, otherwise in the commit body: `Fork: X vs Y → X, because …`.
 
 ### 3. Always apply KISS / DRY / SOLID when writing code
 Apply during implementation, not as a separate review step:
@@ -252,7 +254,10 @@ The merge model is per-project — check which one applies here:
 
 Nothing merges into the default branch until it has been reviewed in a clean
 session with no implementation context. Self-review by the agent that wrote the
-code is not a review — it is the same context grading its own work. Where CI is
+code is not a review — it is the same context grading its own work.
+A clean context means no implementation context: a new session, or — where your
+tool has subagents — a fresh subagent given only the task id, project path, branch
+and the review steps, with no summary of what was built. Where CI is
 absent or frozen, this is the ONLY gate. Exception: trivial changes (typo, copy,
 styling) on the Light workflow.
 

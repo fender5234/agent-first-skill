@@ -21,7 +21,7 @@ All paths below are relative to this skill's folder (the one holding `SKILL.md`)
 
 | User says | Workflow | Read before step 1 |
 |---|---|---|
-| "Проведи дрейф-аудит" / "drift audit" / "дрейф аудит" / "сверь yaml с кодом" | Drift audit — do NOT run setup steps | `workflows/drift-audit.md` + `rules/quality.md` |
+| "Проведи дрейф-аудит" / "drift audit" / "дрейф аудит" / "сверь yaml с кодом" | Drift audit — do NOT run setup steps | `workflows/drift-audit.md` |
 | "Добавь фичу по AF" / "новая фича AF" / "implement feature AF" / "нужен ли ADR" — **and any feature, logic bug fix or refactoring task in an AF project** | Feature — do NOT run setup steps | `workflows/feature.md` + `rules/quality.md` |
 | "Проверь Feature N" / "проверь фичу" / "review Feature" / "проверь выполненную задачу" | Feature review — do NOT run setup steps | `workflows/review.md` + `rules/quality.md` |
 | "обнови проект под AF" / "апгрейд AF" / "upgrade AF" / "обнови AF до текущей версии" | Upgrade. **This is NOT setup.** The project already has AF artifacts and some of them are worth more than what the templates carry — running setup over them destroys project-specific checks | `workflows/upgrade.md` + Step 2 of `workflows/setup.md` |
@@ -41,7 +41,7 @@ A request that is setup by wording but the project ALREADY has
 - `workflows/feature.md` — feature workflow: size check, 9 steps, ADR rules, Self-Check
 - `workflows/review.md` — clean-session feature review (the merge gate)
 - `workflows/drift-audit.md` — semantic check of YAML manifests against code
-- `rules/quality.md` — the seven cross-cutting rules (context7, sequential-thinking,
+- `rules/quality.md` — the seven cross-cutting rules (API gate/context7, recorded forks,
   KISS/DRY/SOLID, Test-First, Feature-Based, Naming, Security)
 - `rules/hard-rules.md` — the four-layer pattern for project-specific rules
 - `CHANGELOG.md` — what changed between methodology versions; the Upgrade Workflow

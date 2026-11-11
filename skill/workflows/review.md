@@ -22,7 +22,30 @@ Session 2:  "Проверь Feature N по AF"              → independent revi
             → all PASS → push → next feature
 ```
 
-Each feature = new session. Each review = new session. Clean context every time.
+Each feature = new session. Each review = clean context: a fresh subagent or a new
+session (see "How to run it"). Clean context every time.
+
+### How to run it
+
+Either of these gives a clean context:
+
+- **Fresh subagent, same session** (preferred where the tool has subagents, e.g.
+  the Agent tool in Claude Code). Pass it exactly the prompt below — fill in the
+  placeholders, add nothing. Do not summarise what was built, which parts are
+  tricky, or what was already checked: that is the implementation context the
+  review exists to be free of, and a reviewer handed the author's framing tends to
+  confirm it.
+
+  ```
+  Проверь Feature <N> по AF. Project: <absolute path>. Branch: <branch>.
+  Read <skill folder>/workflows/review.md and <skill folder>/rules/quality.md
+  and follow them. Report only — do not fix, commit or merge.
+  ```
+
+  Relay its report to the user with every FAIL intact — downgrading a reviewer's
+  FAIL is not the author's call.
+- **New session.** The user opens one and says "Проверь Feature N по AF". Use it
+  when subagents are unavailable or the user prefers it.
 
 ### Review Steps
 
@@ -84,8 +107,8 @@ Each feature = new session. Each review = new session. Clean context every time.
    green and reintroduced the bug on nine indexed pages.
 
    Also check: does a rule the workflow required actually have an artifact? "wrote
-   tests first" with the tests committed after the implementation, "used
-   sequential-thinking" with no named forks.
+   tests first" with the tests committed after the implementation, a real fork
+   (a library or data-model choice) with no record in the ADR or commit body.
 
 8. **Verify the process rules that have no machine gate.** Branch used, gotcha
    budget respected, no existing ADR's decision rewritten. Two of these now have
@@ -101,7 +124,7 @@ By default — **report only**, no fixes.
 If user asks to fix found problems ("исправь", "почини", "fix"):
 - **Minor** (lint errors, missing test, typo) — fix in current session
 - **Major** (architecture, module redesign) — warn user and suggest new session
-- When fixing: apply ALL cross-cutting rules (context7, sequential-thinking, KISS/DRY/SOLID)
+- When fixing: apply ALL cross-cutting rules (API gate, recorded forks, KISS/DRY/SOLID)
 - After fixes: re-run steps 5-6 to verify
 
 ### Output format
@@ -136,4 +159,4 @@ Verdict: N PASS, M FAIL, K MANUAL
 - **DO NOT auto-fix** without user's explicit request
 - **Check EVERY acceptance point** — don't skip or summarize
 - **Be specific in FAIL descriptions** — file path, line number, what's wrong, what's expected
-- **Cross-cutting rules apply to the reviewer too** — use context7 to verify API usage is current, use sequential-thinking if unsure about a finding
+- **Cross-cutting rules apply to the reviewer too** — when a finding depends on how an API behaves, confirm it (repo usage or context7) before reporting it

@@ -8,7 +8,7 @@ How to work with an AI agent in an agent-first project.
 
 **You are the architect. The agent is the implementer.**
 
-You decide "what" and "why". The agent decides "how" — guided by manifests, documentation (context7), structured reasoning (sequential-thinking), and code quality principles (KISS/DRY/SOLID).
+You decide "what" and "why". The agent decides "how" — guided by manifests, documentation (context7), explicit decisions on real forks (recorded in ADR or commit), and code quality principles (KISS/DRY/SOLID).
 
 ---
 
@@ -33,7 +33,7 @@ Why: the agent has full project context from YAML manifests. When you describe t
 |---|---|---|
 | **Task** | Describe outcome + why it matters | — |
 | **Orientation** | Verify the agent found the right blocks. Read the gotchas the agent outputs | Reads project.yaml → layer.yaml → outputs gotchas |
-| **ADR decision** | Approve or adjust the decision. Ask "what alternatives did you consider?" | Uses sequential-thinking to analyze options, presents trade-offs |
+| **ADR decision** | Approve or adjust the decision. Ask "what alternatives did you consider?" | Analyzes options, presents trade-offs |
 | **Implementation** | Don't intervene unless you see a problem | Checks docs via context7, writes code with KISS/DRY/SOLID |
 | **Review** | Read the diff. Ask questions if something looks wrong | Presents changes, updates YAML |
 | **Commit** | Confirm | Commits, pre-commit validates |
@@ -81,7 +81,7 @@ Ask yourself:
 ```
 Start task → agent reads manifests → outputs gotchas → you verify
   ↓
-Agent analyzes approach (sequential-thinking) → presents plan → you approve
+Agent analyzes approach → presents plan → you approve
   ↓
 Agent checks docs (context7) → writes code (KISS/DRY/SOLID) → you review diff
   ↓

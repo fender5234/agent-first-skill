@@ -36,24 +36,25 @@ or when a part has no acceptance criteria of its own.
 ### New feature / new module → Full 9-step workflow
 0. Size check — see Step 0 above; branch before the first commit
 1. Orient — read project.yaml, find affected blocks
-2. Read block context — output gotchas to user (mandatory)
+2. Read block context — read all gotchas; name the ones relevant to this change (or "none relevant")
 3. ADR decision — apply 3-criteria rule
-4. **4.0: context7 gate BEFORE the first Edit/Write** — confirm against current docs
-   every library API this task touches, **including the test runner, assertion and
-   mocking libraries**; training data is not a source; API unconfirmed → write
-   nothing. **4.1:** tests for key scenarios per module, BEFORE implementation.
+4. **4.0: API gate BEFORE the first Edit/Write** — every external API this task
+   touches, **including the test runner, assertion and mocking libraries**, needs a
+   named source: a working use in this repo, or context7 docs (required when the API
+   is new to the repo, a dependency is added/upgraded, or you are unsure); training
+   data is not a source; API unconfirmed → write nothing. **4.1:** tests for key scenarios per module, BEFORE implementation.
    The gate fires BEFORE the tests — a test file is code, and writing one IS the
    first Write. Tests written from memory fail for the wrong reason and pin the
    implementation to an imagined API
-5. Implement — code with sequential-thinking, KISS/DRY/SOLID/Feature-Based
+5. Implement — KISS/DRY/SOLID/Feature-Based; record real forks (ADR or commit body)
 6. Run tests — green → continue, red → fix
 7. Update YAML — manifests of affected blocks
 8. Self-Check — verify code against all cross-cutting rules (see checklist below)
-9. Commit — pre-commit validates. Then review in a clean session before merge
+9. Commit — pre-commit validates. Then review in a clean context (fresh subagent or new session) before merge
 
 ### Self-Check checklist (step 8)
-- [ ] context7: **verify step 4.0 happened BEFORE the first Edit/Write — tests included** — this box confirms the gate was passed, it does not replace it. Ticking it afterwards, having written the code from memory, is the failure this wording exists to prevent
-- [ ] sequential-thinking: **name the forks it was used on.** Reasoning done silently is unverifiable, which is the whole point of the rule. "Used it" with nothing to point at means it was not used
+- [ ] API gate (context7 / repo usage): **every external API this task calls had a named source BEFORE the first Edit/Write — tests included** — this box confirms the gate was passed, it does not replace it
+- [ ] Forks: **every real fork is recorded** — in the ADR or the commit body (`Fork: X vs Y → X, because …`). "No real forks" is a valid answer; say so
 - [ ] **Claims about your own work are verified, not intended.** For every statement that something is covered, protected, prevented or guaranteed by a test — did you watch that test go red with the protection removed? A test written as a tripwire that never fired is documentation of the hazard, not a guard against it. Unverified claims of this kind are the one defect class no machine gate catches
 - [ ] KISS: no functions > 40 lines, no nesting > 3 levels?
 - [ ] DRY: grepped project for similar logic, no unnecessary duplication?
@@ -95,7 +96,7 @@ until it has passed a review in a clean session. Where CI exists this runs along
 it; where CI is absent or frozen, it is the ONLY gate — say so here explicitly so
 nobody reads it as advisory. Exception: trivial changes routed to the Light workflow.
 
-Run in a **new session** (without implementation context) for independent verification.
+Run in a **clean context** for independent verification. A clean context means no implementation context: a fresh subagent given only the fixed reviewer prompt (see the skill's `workflows/review.md`) counts, as does a new session.
 The reviewer agent MUST:
 1. Read project plan → Feature N acceptance (full list of points)
 2. Read `documentation/project.yaml` → relevant layer YAML → gotchas and notes
@@ -110,7 +111,7 @@ By default — **report only**, no fixes.
 If user asks to fix ("исправь", "fix"):
 - Minor (lint, missing test, typo) — fix in current session
 - Major (architecture, redesign) — warn and suggest new session
-- When fixing: apply ALL cross-cutting rules (context7, sequential-thinking, KISS/DRY/SOLID)
+- When fixing: apply ALL cross-cutting rules (API gate, recorded forks, KISS/DRY/SOLID)
 - After fixes: re-run automated checks
 
 Recommended development cycle:
@@ -173,15 +174,15 @@ invoke `pre-merge-commit`, not `pre-commit`.
 
 ## Cross-cutting quality rules
 
-### 1. Always use context7 for documentation
-Before reading, writing, or reviewing any code — check current documentation via context7.
-Applies to: frameworks, libraries, standard library, build/test tools.
-Never rely on training data — API and best practices change between versions.
+### 1. Confirm external APIs before using them (context7)
+Every external API you call — framework, library, build/test tool — needs a source, not memory: a working use of the same API in this repo at the pinned version, or current docs via context7.
+context7 is required when the API is new to the repo, a dependency is added or upgraded, the library is newer than your training data, or you are unsure.
+Never rely on training data alone — APIs change between versions.
 
-### 2. Always use sequential-thinking for decisions
-Before and during implementation — use sequential-thinking for any non-trivial decision.
-Applies to: ADR decisions, implementation approach, trade-offs, debugging, refactoring, mid-implementation design choices.
-Structure: problem → options → trade-offs → decision. If you hit a fork during coding — stop and think first.
+### 2. Decide real forks explicitly and record them
+Your own reasoning is enough; the sequential-thinking MCP is optional, not required.
+A real fork = 2+ reasonable options with different consequences (data model, library, error strategy, public API shape). Trivial choices are not forks.
+Record each real fork in one line — in the ADR if it meets the ADR rule, otherwise in the commit body: `Fork: X vs Y → X, because …`.
 
 ### 3. Always apply KISS / DRY / SOLID when writing code
 - KISS: function > 40 lines → split; nesting > 3 levels → refactor
@@ -259,7 +260,7 @@ Format: **`<topic>` — CLOSED `<date>`.** `<conclusion>` `<where the evidence l
 
 ### When editing a block:
 1. Before changes: read its gotchas and notes in the YAML manifest
-2. **LIST all gotchas to the user** before starting implementation — never skip silently
+2. Read all of them; in the task brief, name the ones this change can trip over (or "none relevant") — one line, not a dump
 3. If you discover a non-trivial detail during work that future agent
    should know — ADD IT to gotchas
 4. If you make architectural decision — create ADR and link in adr: []

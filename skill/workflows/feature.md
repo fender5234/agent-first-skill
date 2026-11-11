@@ -44,7 +44,7 @@ and the honest move is to say the review will need more than one session.
 ### Feature Workflow Steps (9 steps)
 
 1. **Orient** — read `documentation/project.yaml` to find affected layers
-2. **Read block context** — read YAML of affected blocks: summary, gotchas, notes, related_blocks. **Print all gotchas of affected blocks to the user** — this is mandatory, never skip silently
+2. **Read block context** — read YAML of affected blocks: summary, gotchas, notes, related_blocks. **Read every gotcha of the affected blocks.** In the task brief, list the ones this change can trip over, or write "none relevant" — one line, not a dump of all of them
 3. **Decide on ADR** — ask the 3-criteria question:
    - Are there 2+ reasonable ways to implement?
    - Would someone in 6 months ask "why X not Y?"
@@ -80,13 +80,15 @@ and the honest move is to say the review will need more than one session.
    Skipped on the Light workflow (typo, copy, styling) — see Task routing.
 
 4. **Confirm the APIs, then write tests** — in that order:
-   - **4.0 — context7 gate, MANDATORY, before the first `Edit`/`Write` of the task.**
-     List every external library this task will touch — framework, ORM, validation,
+   - **4.0 — API gate, MANDATORY, before the first `Edit`/`Write` of the task.**
+     List every external API this task will call — framework, ORM, validation,
      **test runner, assertion and mocking libraries**, build tool, plugins. For each,
-     resolve it and query current docs. The point is to confirm the APIs you are
-     about to call still exist and are not deprecated in the major version this
-     project pins. **Training data is not an acceptable source.** If an API cannot
-     be confirmed in the docs — do not write anything; confirm it or escalate.
+     name its source: a working use of the same API in this repo at the pinned
+     version, or current docs via context7 for the pinned major version. context7
+     is required when the API is new to the repo, the task adds or upgrades a
+     dependency, the library is newer than your training data, or you are unsure
+     (see `rules/quality.md` rule 1). **Training data is not an acceptable source.**
+     If an API cannot be confirmed — do not write anything; confirm it or escalate.
    - **4.1 — write tests** for key scenarios of the module, BEFORE implementation.
      Not per function — per module. Cover main success paths, edge cases, error
      handling.
@@ -109,8 +111,8 @@ and the honest move is to say the review will need more than one session.
    - `depends_on` / `related_blocks` — if connections changed
 7. **Add gotcha** — if stumbled on non-obvious issue (budget: 1-2 per session)
 8. **Self-Check** — before committing, verify code against cross-cutting rules (`rules/quality.md`):
-   - [ ] context7: **verify step 4.0 actually happened before the first `Edit`/`Write` — tests included** — this box is verification that the gate was passed, NOT a substitute for it. Ticking it post-hoc after writing code from memory is the failure mode this wording exists to prevent
-   - [ ] sequential-thinking: **name the forks it was used on.** Reasoning done silently is unverifiable, and verifiability is the entire value of the rule. "Used it" with nothing to point at means it was not used
+   - [ ] API gate (context7 / repo usage): **every external API this task calls had a named source before the first `Edit`/`Write` — tests included** — this box verifies the step 4.0 gate was passed, it is NOT a substitute for it
+   - [ ] Forks: **every real fork is recorded** — in the ADR or the commit body (`Fork: X vs Y → X, because …`). "No real forks" is a valid answer; say so
    - [ ] **Claims about your own work are verified, not intended.** For every statement that something is covered, protected, prevented or guaranteed by a test — did you watch that test go red with the protection removed? A tripwire that never fired documents the hazard; it does not guard against it. This is the one defect class no machine gate catches, which is why it is also a review item
    - [ ] KISS: no functions > 40 lines, no nesting > 3 levels?
    - [ ] DRY: grepped project for similar logic, no unnecessary duplication?
@@ -183,12 +185,17 @@ Create ADR ONLY if all 3 are true:
   or is merged locally, is a per-project answer — see Step 2 of setup (`workflows/setup.md`).
 - **A task is not done until it has been reviewed in a clean session.** Run the
   Feature Review Workflow (`workflows/review.md`) before merging. Self-review by the agent that wrote
-  the code is not a review — it is the same context grading its own work.
+  the code is not a review — it is the same context grading its own work. A fresh
+  subagent given only the fixed reviewer prompt counts as a clean session — see
+  "How to run it" in `workflows/review.md`.
 - **ADR BEFORE implementation, never after** — retrospective ADRs are forbidden
 - **If you start coding and realize "this is a real choice"** — stop, write ADR, then continue
 - **Update YAML as you go** — don't defer to "cleanup pass later"
 - **Link ADR both ways** — block's `adr: [N]` + ADR's `Affects: [block-name]`
-- **Show user the plan before coding** — especially when ADR is needed, let user approve the direction
+- **Stop for approval only where the decision is the user's** — an ADR is needed; the
+  acceptance criteria were written by you rather than taken from a plan (step 3.5);
+  the task was split in step 0; or the scope is ambiguous. Otherwise post the brief
+  and proceed — the user can still interrupt
 
 ### Output format for user
 
@@ -201,11 +208,7 @@ When routing to this workflow, present to user:
 Шаг 1-2: Ориентирование
   Затронутые блоки: <list from YAML>
 
-  Gotchas (обязательно прочитать):
-    <block-name>:
-      - <gotcha 1>
-      - <gotcha 2>
-    <block-name>: нет gotchas
+  Gotchas, относящиеся к изменению: <block-name>: <gotcha> | нет
 
 Шаг 3: ADR analysis
   Варианты: <option A>, <option B>, ...
@@ -216,7 +219,9 @@ When routing to this workflow, present to user:
   Context: ...
   Decision: ...
 
-Начинать реализацию? (yes / правки)
+Только если нужен ADR / критерии написаны мной / задача разбита / скоуп неясен:
+  Начинать реализацию? (yes / правки)
 ```
 
-Wait for user approval before creating ADR and writing code.
+Wait for approval only in the cases listed in the critical rules above; otherwise
+post the brief and proceed.
