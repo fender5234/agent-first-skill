@@ -1,6 +1,6 @@
 # Agent-First Skill (Portable Archive)
 
-**Версия 1.4.0** — история изменений в [`CHANGELOG.md`](CHANGELOG.md).
+**Версия 1.5.0** — история изменений в [`CHANGELOG.md`](CHANGELOG.md).
 
 Проект записывает свою версию методологии в `documentation/project.yaml →
 meta.af_version`. Отсутствует — значит 1.0.0. Обновляется командой
@@ -21,7 +21,9 @@ agent-first-skill/
 ├── agent-first.md         ← полная методология AF (справочник)
 ├── AGENTS.md              ← универсальные правила для любого AI-агента
 └── skill/                 ← готовый скилл для Claude Code
-    ├── SKILL.md
+    ├── SKILL.md           ← маршрутизатор: какая команда → какой файл читать
+    ├── workflows/         ← setup, upgrade, feature, review, drift-audit
+    ├── rules/             ← quality.md (7 сквозных правил), hard-rules.md
     ├── guide.md
     ├── CHANGELOG.md       ← копия корневого; нужна маршруту апгрейда
     ├── operator-guide.md  ← руководство оператора (человека)
