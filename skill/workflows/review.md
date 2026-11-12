@@ -11,7 +11,7 @@ The purpose: a fresh agent reviews code written by another agent (or the same ag
 **This is a gate, not an optional command.** No task merges into the default branch
 until it has passed a review in a clean session. Where a project has CI, this runs
 alongside it; where CI is absent or frozen, it is the ONLY gate — say so explicitly
-in the project's CLAUDE.md so nobody treats it as advisory. The one exception is
+in the project's agent instructions file (CLAUDE.md / AGENTS.md) so nobody treats it as advisory. The one exception is
 trivial changes (typo, copy, styling) routed to the Light workflow.
 
 ### Recommended development cycle
@@ -88,7 +88,7 @@ Either of these gives a clean context:
    - Security: no hardcoded secrets, no SQL concatenation
    - Naming: consistent with project patterns
    - Architecture: feature-based structure respected
-   - Project-specific rules (from CLAUDE.md)
+   - Project-specific rules (from CLAUDE.md / AGENTS.md)
 
 7. **Audit the claims the author made about their own work.** This is the reviewer's
    highest-value pass, because it is the only defect class no gate catches: lint,

@@ -12,8 +12,8 @@ both Test-First checklist items, and four of six Security checklist items during
 setup. Discovered three months later, by hand.
 
 Usage:
-    python documentation/check-claude-md-sections.py                      # CLAUDE.md
-    python documentation/check-claude-md-sections.py CLAUDE.md AGENTS.md  # both
+    python documentation/check-claude-md-sections.py                      # every instructions file found (CLAUDE.md / AGENTS.md)
+    python documentation/check-claude-md-sections.py CLAUDE.md AGENTS.md  # explicit list
 
 Several files are worth passing: where AGENTS.md mirrors CLAUDE.md for non-Claude
 agents, the mirror drifts silently — nothing else compares them, and a rule
@@ -133,7 +133,14 @@ def check(target: Path) -> int:
 
 
 if __name__ == "__main__":
-    names = sys.argv[1:] or ["CLAUDE.md"]
+    # With no arguments, check every instructions file that exists (CLAUDE.md,
+    # AGENTS.md) rather than assuming Claude Code. If none exist, fall back to
+    # CLAUDE.md so the error message names a concrete file to create.
+    names = sys.argv[1:]
+    if not names:
+        names = [n for n in ("CLAUDE.md", "AGENTS.md") if (ROOT / n).exists()]
+        if not names:
+            names = ["CLAUDE.md"]
     # Check every file before exiting: reporting one missing section and hiding
     # the rest turns one fix-and-rerun cycle into several.
     sys.exit(max(check(ROOT / n) for n in names))

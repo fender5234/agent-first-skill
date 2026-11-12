@@ -1,6 +1,8 @@
-# Sections to add to CLAUDE.md
+# Sections to add to the project's agent instructions file
 
-Copy these sections into the project's CLAUDE.md file.
+Copy these sections into the project's instructions file — `AGENTS.md` (Kimi,
+Cursor, Cline, Aider, Continue, Windsurf) and/or `CLAUDE.md` (Claude Code).
+If the project has both, add to both.
 
 ---
 

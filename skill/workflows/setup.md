@@ -79,12 +79,17 @@ Copy and adapt templates to project:
 - `templates/yaml-to-mermaid.py` → `documentation/yaml-to-mermaid.py` (optional, on-demand graphs)
 - `templates/ci-validate.yml` → `.github/workflows/validate-docs.yml` (optional, for teams)
 
-### Step 5: Update project's CLAUDE.md
-Target file: `CLAUDE.md` in the project root (NOT the skill's files).
+### Step 5: Update the project's agent instructions file
+Target file: the agent instructions file in the project root (NOT the skill's
+files). Which file depends on the agent ecosystem the project targets:
+`AGENTS.md` is read by Kimi, Cursor, Cline, Aider, Continue, Windsurf;
+`CLAUDE.md` is read by Claude Code. If both exist, update both — the checker
+takes several filenames precisely because a mirror drifts silently. If neither
+exists, create `AGENTS.md` (the cross-agent standard).
 
 **Behavior:**
-- If CLAUDE.md exists: APPEND sections from `templates/claude-md-sections.md` at the end. Do NOT overwrite existing content. Do NOT duplicate sections if they already exist (check by heading text).
-- If CLAUDE.md does NOT exist: create it with sections from the template.
+- If the file exists: APPEND sections from `templates/claude-md-sections.md` at the end. Do NOT overwrite existing content. Do NOT duplicate sections if they already exist (check by heading text).
+- If the file does NOT exist: create it with sections from the template.
 - Preserve all existing user content, commands, and project-specific instructions.
 
 **Sections to add:**
@@ -99,11 +104,14 @@ Target file: `CLAUDE.md` in the project root (NOT the skill's files).
 
 Omit only the sections Step 2's answers rule out, and say which ones and why.
 
-**Placement:** insert new sections near the top of CLAUDE.md (after the project overview but before detailed commands), so future agents see them early.
+**Placement:** insert new sections near the top of the instructions file (after the project overview but before detailed commands), so future agents see them early.
 
 **After updating:** show user a diff of what was added and ask for confirmation before saving.
 
-**Then run `python documentation/check-claude-md-sections.py`.** The approval step
+**Then run `python documentation/check-claude-md-sections.py`** — pass every
+instructions file the project has, e.g.
+`python documentation/check-claude-md-sections.py CLAUDE.md AGENTS.md` (with no
+arguments it checks whichever of `CLAUDE.md` / `AGENTS.md` exist). The approval step
 above is where sections get lost — a long diff gets trimmed and nothing afterwards
 notices. Do not skip this because the diff "looked complete"; that judgement is
 exactly what the check exists to replace.

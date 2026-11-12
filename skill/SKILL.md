@@ -17,6 +17,22 @@ are in those files and nowhere else.
 
 All paths below are relative to this skill's folder (the one holding `SKILL.md`).
 
+## Agent-environment mapping (this copy runs under Kimi)
+
+The methodology text was written for Claude Code; the equivalents in this
+environment are:
+
+| Claude Code | Kimi |
+|---|---|
+| `CLAUDE.md` in project root | `AGENTS.md` (auto-read by Kimi and most other agents) |
+| `~/.claude/skills/agent-first-setup/` | this skill's install folder |
+| `/agent-first-setup` slash command | trigger phrases from this file's frontmatter ("настрой AF", "добавь фичу по AF", …) |
+| fresh subagent for clean-session review | a NEW session (default); a subagent only when the user explicitly asks for one |
+| context7 docs lookup | Context7 plugin (installed) |
+
+Wherever a workflow or template says `CLAUDE.md`, read it as "the project's
+agent instructions file": `AGENTS.md`, `CLAUDE.md`, or both if both exist.
+
 ## Command routing
 
 | User says | Workflow | Read before step 1 |
